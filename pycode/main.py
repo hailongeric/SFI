@@ -1,11 +1,10 @@
 
-from add_sfi import add_align
-import os
+from add_sfi import *
 import sys
 from ins_struct import *
 from utilities import * 
 from ch_reg_function import *
-from build_struct import make_struct
+from build_struct import *
 
 def form(s_list):
     att_list = []
@@ -48,5 +47,4 @@ def main(argv):
     return
     
 if __name__ == "__main__":
-    DEBUG = False
     main(sys.argv)

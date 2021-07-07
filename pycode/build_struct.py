@@ -1,31 +1,33 @@
 # python 
-from keystone import *
 
 from ins_struct import *
 from utilities import *
+from define import *
 
-ks = Ks(KS_ARCH_X86, KS_MODE_64)
-ks.syntax = KS_OPT_SYNTAX_ATT
 
 def struct_lable(ins_str,att_s):
-    att_s.Itype = 1
+    att_s.ori_str = ins_str
+    att_s.Itype = ILABEL
     att_s.operand_size =  1
     att_s.op = ins_str
     return att_s
 
 def struct_annotation(ins_str,att_s):
-    att_s.Itype = 2
+    att_s.ori_str = ins_str
+    att_s.Itype = IANNOT
     att_s.operand_size =  1
     att_s.op = ins_str
     return att_s
 
 def struct_instruction_1(ins_str,att_s):  # single operand 
-    att_s.Itype = 3
+    att_s.ori_str = ins_str
+    att_s.Itype = IINSTR
     att_s.operand_size =  1
     att_s.op = ins_str
     return att_s
 
-def struct_instruction_2(ins_str,att_s): #  multi operand
+def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
+    # TODO add some it is 2 op_size
     """
     op_data Dtype 
     op_data -> 'Segment-Overwrite:': S_offset: (base: index: scale)
@@ -34,85 +36,45 @@ def struct_instruction_2(ins_str,att_s): #  multi operand
     """
     op = ins_str.split("\t")[0]
     op_data = ins_str.split("\t")[1]
-    att_s.Itype = 3
-    att_s.operand_size =  3
+
+    att_s.ori_str = ins_str
+    att_s.Itype = IINSTR
     att_s.op = op
-    per = ""
-    access_memory =  False
-    if_base = False
-    if_index = False
-    finish_src = False
-    dst_start = False
-    Dtype = 0
-    for i, c in enumerate(op_data):
-        if "(" != c or "," != c or ":" != c or ")" != c:
-            per += c
-            if i == len(op_data) -1:
-                op_dst = OP_DATA()
-                op_dst.segment_override = segment_override
-                op_dst.s_offset = s_offset
-                op_dst.base = base
-                op_dst.index = index
-                op_dst.scale = scale
-                op_dst.Dtype = Dtype
-        elif c == ":":
-            segment_override = per
-            Dtype = 0x10000 | Dtype
-            per = ""
-        elif c == "(":
-            access_memory = True
-            s_offset  = per
-            Dtype = 0x01000 | Dtype
-            per = ""
-        elif c == "," and access_memory == True:
-            if_base = True
-            base = per
-            Dtype = 0x00100 | Dtype
-            per  =""
-        elif c == "," and if_base == True:
-            assert access_memory == True
-            if_index = True
-            if_base = False
-            index = per 
-            Dtype = 0x00010 | Dtype
-            per = ""
-        elif c == ")" and if_index == True:
-            assert access_memory == True
-            scale =  per
-            Dtype = 0x00001 | Dtype
-            per = ""
-            access_memory == False
-            if_index = False
-            finish_src = True
-            if i == len(op_data) -1 :
-                op_dst = OP_DATA()
-                op_dst.segment_override = segment_override
-                op_dst.s_offset = s_offset
-                op_dst.base = base
-                op_dst.index = index
-                op_dst.scale = scale
-                op_dst.Dtype = Dtype
-        elif (c == "," and finish_src == True and dst_start == False) or ( c == "," and  dst_start == False) :
-            op_src = OP_DATA()
-            op_src.segment_override = segment_override
-            op_src.s_offset = s_offset
-            op_src.base = base
-            op_src.index = index
-            op_src.scale = scale
-            op_src.Dtype = Dtype
-            Dtype = 0
-            per = ""
-            dst_start == True
-        elif c == "," and finish_src == True and dst_start == True:
-            op_dst = OP_DATA()
-            op_dst.segment_override = segment_override
-            op_dst.s_offset = s_offset
-            op_dst.base = base
-            op_dst.index = index
-            op_dst.scale = scale
-            op_dst.Dtype = Dtype
-    att_s.source = op_src
-    att_s.destination = op_dst
+
+    op_data = split_op_data(op_data)
+    assert len(op_data) == 2
+
+    if len(op_data[1]) == 0:
+        att_s.operand_size = 2
+        op_data = op_data[:1]
+    else:
+        att_s.operand_size = 3
+    
+    op_data_struct = []
+    access_memory = []
+    for data in op_data:
+        single_data = split_single_op_data(data)
+        assert len(single_data) == 6
+        temp = OP_DATA(single_data[0],single_data[1],single_data[2],single_data[3],single_data[4])
+        access_memory.append(single_data[5])
+        op_data_struct.append(temp)
+
+    att_s.source = op_data_struct[0]
+    if att_s.operand_size != 2:
+        att_s.destination = op_data_struct[1]
+        if True not in access_memory:
+            att_s.DataType = OPDREG
+        else:
+            att_s.DataType = OPDMEM
+    else:
+        if True not in access_memory:
+            att_s.DataType = OPDREGREG
+        elif False not in access_memory:
+            att_s.DataType = OPDMEMMEM
+        elif access_memory[0] == True:
+            att_s.DataType = OPDMEMREG
+        else:
+            att_s.DataType = OPDREGMEM
     return att_s
 
 def make_struct(ins_str):
@@ -137,11 +99,11 @@ def make_struct(ins_str):
         if ins_list[0][0] != "." and ins_list[0][0] != "#":
             log(ins_list)
             return struct_instruction_2(ins_str,att_s)
-            # TODO
         else:
             print("[+]: unknow instruction : "+ ins_str)
     else:
         print("[+]: unknow instruction : "+ ins_str)
+    return None
 
 
 def add_align(as_data):
@@ -173,7 +135,7 @@ def add_align(as_data):
                     hard_code,count = ks.asm(data)  # ks.asm return truple such as.([90,90],1L)
                 except keystone.KsError as err:
                     log(err)
-                    print "[+]: "+data+"--> asm error amd I default using jmp lable: 7 byte code"
+                    print("[+]: "+data+"--> asm error amd I default using jmp lable: 7 byte code")
                     hard_code = [90]*7
                     count = 1 
             assert count == 1
@@ -188,3 +150,15 @@ def add_align(as_data):
                 ret.append(data)
         
     return ret
+
+
+def trans_str(att_list):
+    s = []
+    for att in att_list:
+        att:ATT_Syntax
+        if att.Itype != ILABEL:
+            s.append("\t" + att.ori_str)
+        else:
+            s.append(att.ori_str)
+    return '\n'.join(s)
+

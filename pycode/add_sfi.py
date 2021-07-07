@@ -1,13 +1,10 @@
 # python 
 
-from keystone import *
-import re
-import sys
+from utilities import expand_list
+from ins_struct import *
+from build_struct import make_struct
 
 DEBUG = False
-
-ks = Ks(KS_ARCH_X86, KS_MODE_64)
-ks.syntax = KS_OPT_SYNTAX_ATT
 
 op_list = ["push", "mov", "add", "cmp", "jmp", "sub", "mul", "div", "rcp", "sqrt", "rsqrt", "lea", "call", "load", ""]
 
@@ -23,160 +20,6 @@ def if_in(op_list,op):
     
     return False
 
-def log(s):
-    if DEBUG:
-        print s
-    return 
-
-def ch_rg(s):
-    # rbp --> r14
-    # rsp --> r15
-    # arg s: string --> read input file convert string
-    # return string --> string after solve ch_rg 
-    s = s.replace("%rsp","%r15")
-    s = s.replace("%rbp","%r14")
-    s = s.replace("%spl","%r15b")
-    s = s.replace("%bpl","%r14b")
-    s = s.replace("%sp","%r15w")
-    s = s.replace("%bp","%r14w")
-    s = s.replace("%esp","%r15d")
-    s = s.replace("%ebp","%r14d")
-    return s
-
-def ch_push(s):
-    # modify push instruction
-    # arg s: a line string --> need to modify
-    # return ins: string list --> after add some sfi
-    s_add = "subq\t$8, %r15"
-    s = s.replace('push','mov')
-    s += ", 0(%r15)"
-    return ['\t'+s_add, '\t'+s]
-
-def ch_pop(s):
-    # modify pop instruction
-    # arg s: a line string --> need to modify
-    # return ins: string list --> after add some sfi
-    s = s.replace('pop','mov')
-    s = s.split('\t')
-    s[1]  = "0(%r15), "+s[1]
-    s = "\t".join(s)
-    s_add = "addq\t$8, %r15"
-    return ['\t'+s, '\t'+s_add]
-
-def ch_ret(s):
-    # modify ret instruction
-    # arg string : "ret"
-    # return ins: string list --> after add some sfi
-    s_add = "addq\t$8, %r15"
-    s = "jmp\t*-8(%r15)"
-    return ['\t'+s_add, '\t'+s]
-
-def ch_call(s):
-    # modify call instruction
-    # arg string : a line str --> call instrcution string
-    # return ins: string list --> after add some sfi
-    s_add ="subq\t$8, %r15"
-    # s_add_1 ="movq    %rip, (%r15)"
-    s_add_1 ="lea\t0(%rip), %rax"
-    s_add_2 = "addq\t$12, %rax"
-    s_add_3 ="movq\t%rax, (%r15)"
-    s = s.replace("call","jmp *")
-    return ['\t'+s_add,'\t'+s_add_1,'\t'+s_add_2,'\t'+s_add_3,'\t'+s]
-
-def ch_leave(s):
-    # modify leave instruction
-    # arg string : a line str --> "leave" instrcution string
-    # return ins: string list --> after add some sfi
-    assert s == "leave"
-    s_add = "movq\t%r14, %r15"
-    s_add_1 = "movq\t(%r15), %r14"
-    s_add_2 = "addq\t$8, %r15"
-    return ['\t'+s_add, '\t'+s_add_1, '\t'+s_add_2]
-
-def create_output_file(data_list, sfi_filename):
-    try:
-        f = open(sfi_filename,'w+')
-    except OSError as err:
-        print("Open file error: {0}".format(err))
-    for data in data_list:
-        if type(data) == str:
-            f.write(data+'\n')
-        else:
-            assert type(data) == list
-            for subdata in data:
-                if type(subdata) == str:
-                    f.write(subdata+'\n')
-                else:
-                    assert type(subdata) == list
-                    for subsubdata in subdata:
-                        assert  type(subsubdata) == str
-                        f.write(subsubdata+'\n')
-    f.close()
-    return
-
-def expand_data_list(data_list):
-    # expand some multi list element
-    ret = []
-    for data in data_list:
-        if type(data) == str:
-            ret.append(data)
-        else:
-            assert type(data) == list
-            for subdata in data:
-                if type(subdata) == str:
-                    ret.append(subdata)
-                else:
-                    assert type(subdata) == list
-                    for subsubdata in subdata:
-                        assert  type(subsubdata) == str
-                        ret.append(subsubdata)
-    return ret
-
-def add_align(as_data):
-    global ks
-    ret = []
-    align = 32
-    for data in as_data:
-        s_line = data.strip()
-        if len(s_line) == 0:
-            ret.append(data)
-            continue
-        if s_line[0] == '.': # annotation
-            if ".align" in data:
-                continue
-            ret.append(data)
-            continue
-        if s_line[-1] == ':': # lable
-            ret.append("\t.align 32")
-            ret.append(data)
-            align = 32
-            continue
-        else:
-            log("add_align --> " + data)
-            if "endbr" in data[:6]:  # deal with endbra64 and endbra32 keystone can't solve
-                hard_code = [90]*4
-                count = 1
-            else:
-                try:
-                    hard_code,count = ks.asm(data)  # ks.asm return truple such as.([90,90],1L)
-                except keystone.KsError as err:
-                    log(err)
-                    print "[+]: "+data+"--> asm error amd I default using jmp lable: 7 byte code"
-                    hard_code = [90]*7
-                    count = 1 
-            assert count == 1
-            align -= len(hard_code)
-            if align < 0:
-                align += len(hard_code)
-                assert align >= 0
-                ret.append("\t.align 32")
-                align =  32-len(hard_code)
-                ret.append(data)
-            else:
-                ret.append(data)
-        
-    return ret
- 
 def add_memory_confine(ins_data):
     ret = []
     split_data = ins_data.strip()
@@ -219,6 +62,7 @@ def add_memory_confine(ins_data):
             return ins_data
 
 def add_address_confinement(ins_data):
+    # TODO
     split_data = ins_data.strip()
     split_data = split_data.split("\t" )
     if "%" in split_data[1]:
@@ -244,61 +88,89 @@ def add_confinement(instruction_data):
 
     return ret
 
-def add_sfi(filename):
-    try:
-        f = open(filename,'r')
-        as_data = f.read()
-        f.close()
-    except OSError as err:
-        print("Open read file error: {0}".format(err))
-    as_data = ch_rg(as_data)  # replace rsp rbp using r15 r14
-    as_data = as_data.split('\n')
-    index = 0
-    as_data_len = len(as_data)
-    while index < as_data_len:
-        s_line =  as_data[index]
-        s_line = s_line.strip()
-        if len(s_line) == 0:
-            index += 1
-            continue
-        if s_line[0] == '.': # annotation
-            index += 1
-            continue
-        if s_line[-1] == ':': # lable
-            index += 1
-            continue
-        else:
-            ins =  s_line.split("\t")
-            op = ins[0]
-            if "push" in  op:
-                as_data[index] = ch_push(s_line)
-            elif "pop" in op:
-                as_data[index] = ch_pop(s_line)
-            elif "ret" in op:
-                as_data[index] = ch_ret(s_line)
-            elif "call" in op:
-                as_data[index] = ch_call(s_line)
-            elif "leave" in op:
-                as_data[index] = ch_leave(s_line)
-        index += 1
-
-    as_data = expand_data_list(as_data)
-    as_data = add_confinement(as_data)
-    as_data = add_align(as_data)
-    create_output_file(as_data,sfi_filename="sfi_"+filename)
-    return
-
-def main(argv):
-    filename = "test.s"
-    if len(argv) < 2:
-        print("no specify file (default test.s) ")
+# def memory_confine_base(op_data:OP_DATA):
+def memory_confine_base(op_data):
+    dst_dtype =  op_data.get_Dtype()
+    if dst_dtype == 0x00100 or dst_dtype == 0x01100:   # also solve 0x01000
+        base = op_data.base
+        s = "mov\t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
+        op_data.base = "%r13"
+        op_data.index = base
+        return [ s, op_data ]
     else:
-        filename = argv[1]
-        print("add SFI in {0}".format(filename))
-    add_sfi(filename)
+        base = op_data.base
+        s = "lea\t" + str(op_data) +", " + base
+        s2 = "mov\t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
+        ret_op_data = OP_DATA()
+        ret_op_data.base = "%r13"
+        ret_op_data.index = base
+        ret_op_data.scale = "1"
+        return [s, s2, ret_op_data]
         
-if __name__ == "__main__":
-    main(sys.argv)
-# TODO 
-# modify .L0: lable in ch_register : add_sfi
+def memory_confine_REGMEM(att:ATT_Syntax):
+    dst_data =  att.destination
+    dst_data:OP_DATA
+    ret_data = memory_confine_base(dst_data)
+    att.destination = ret_data[-1]
+    ret_data = ret_data[:-1]
+    ret_att = []
+    for s in ret_data:
+        ret_att.append(make_struct(s))
+    ret_att.append(att)
+    return ret_att
 
+def memory_confine_MEMREG(att:ATT_Syntax):
+    src_data =  att.source
+    src_data:OP_DATA
+    ret_data = memory_confine_base(src_data)
+    att.source = ret_data[-1]
+    ret_data = ret_data[:-1]
+    ret_att = []
+    for s in ret_data:
+        ret_att.append(make_struct(s))
+    ret_att.append(att)
+    return ret_att
+
+def memory_confine_MEMMEM(att:ATT_Syntax):
+    src_data =  att.source
+    src_data:OP_DATA
+    ret_data = memory_confine_base(src_data)
+    att.source = ret_data[-1]
+    ret_data = ret_data[:-1]
+    ret_att = []
+    for s in ret_data:
+        ret_att.append(make_struct(s))
+    dst_data =  att.destination
+    dst_data:OP_DATA
+    ret_data = memory_confine_base(dst_data)
+    att.destination = ret_data[-1]
+    ret_data = ret_data[:-1]
+    for s in ret_data:
+        ret_att.append(make_struct(s))
+    ret_att.append(att)
+    return ret_att
+    
+def memory_confine_MEM(att:ATT_Syntax):
+    return memory_confine_MEMREG(att)
+
+def memory_confine_IMEREG(att:ATT_Syntax):
+    return att
+
+def add_sfi_main(att_list):
+    confin_fun = {
+        OPDREGMEM : memory_confine_REGMEM,
+        OPDMEMREG : memory_confine_MEMREG,
+        OPDMEMMEM : memory_confine_MEMMEM,
+        OPDMEM    : memory_confine_MEM,
+        OPDIMEREG : memory_confine_IMEREG
+    }
+    for index,att in enumerate(att_list):
+        att:ATT_Syntax
+        if att.Itype == 3:
+            if att.DataType == OPDREG or att.DataType == OPDREGREG or att.DataType == OPDIMEREG:
+                continue
+            att_list[index] = confin_fun[att.DataType](att)
+        if att.Itype == 2:
+            if "jmp" in att.opp:
+                
+    return expand_list(att_list)
