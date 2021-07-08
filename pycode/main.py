@@ -6,10 +6,11 @@ from utilities import *
 from ch_reg_function import *
 from build_struct import *
 
-def form(s_list):
+def main_main(s_list):
     att_list = []
     log("   [+]: parse assemble code...")
     for ins in s_list:
+        # print(str(make_struct(ins)))
         att_list.append(make_struct(ins))
     log("   [+]: solve jump instrcution")
     att_list = solve_jump_ins_main(att_list)
@@ -39,10 +40,14 @@ def main(argv):
     log("[+]: pass condition, and start to change stack reg")
     s = replace_stack_reg(s)
     log("[+]: enter main logic... ")
-    s = s.split('\n')
-    s = form(s)
+    s_list =  split_file_data(s)
+    s = main_main(s_list)
     log("[+]: finish add sfi, and ouptut file {0} ".format(out_filename))
-    write_file(s,out_filename)
+
+    # ！！！ in special    jmp * don't using in static shared object
+    s = s.replace('*',' ')
+
+    write_file_line(s,out_filename)
     log("[+]: Done !!!")
     return
     

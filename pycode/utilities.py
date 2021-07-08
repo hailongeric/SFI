@@ -2,7 +2,6 @@
 
 DEBUG = True
 
-
 def log(s):
     if DEBUG:
         print(s)
@@ -12,7 +11,7 @@ def expand_list(s):
     ret = s
     flag = False
     while flag == False:
-        flag == True
+        flag = True
         s =  ret
         ret = []
         for i in s:
@@ -36,27 +35,20 @@ def assert_condition(s):
     
     if "syscall" in s:
         return False
-        
+    
+    # !!! in special %rip can't place destination
+    s = s.split("\n")
+    for c in s:
+        if "rip" in c:
+            t = split_op_data(c)
+            if "rip" in t[1]:
+                return False
+
     return True
 
-def write_file(data_list, sfi_filename):
-    try:
-        f = open(sfi_filename,'w+')
-    except OSError as err:
-        print("Open file error: {0}".format(err))
-    for data in data_list:
-        if type(data) == str:
-            f.write(data+'\n')
-        else:
-            assert type(data) == list
-            for subdata in data:
-                if type(subdata) == str:
-                    f.write(subdata+'\n')
-                else:
-                    assert type(subdata) == list
-                    for subsubdata in subdata:
-                        assert  type(subsubdata) == str
-                        f.write(subsubdata+'\n')
+def write_file_line(data_str, sfi_filename):
+    f = open(sfi_filename,'w+')
+    f.write(data_str+"\n")
     f.close()
     return
 
@@ -74,10 +66,10 @@ def split_single_op_data(s):
     if ":"  in s:
         segement_overwrite = s.split(":")[0]
         s = s.split(":")[1]
-
-    if "（" not in s:
+    if "(" not in s:
         base = s
     else:
+        print(s)
         s_offset = s.split("(")[0]
         s = s.split("(")[1]
         assert s[-1] == ")"
@@ -101,8 +93,18 @@ def split_op_data(s):
             bracket = False
     return [s,""]
 
-def trans_str(att_list):
-    pass
+def split_file_data(s):
+    s = s.split('\n')
+    ret = []
+    for i in s:
+        if len(i.strip()) == 0:
+            continue
+        ret.append(i)
+    return ret
 
+def if_in(op_list,op):
+    for i_op in op_list:
+        if i_op in op:
+            return True
     
-
+    return False

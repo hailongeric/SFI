@@ -41,6 +41,13 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
     att_s.Itype = IINSTR
     att_s.op = op
 
+    # TODO deal with jmp lable
+    if "%" not in op_data:
+        att_s.jmp_lable = op_data
+        att_s.operand_size = 2
+        att_s.DataType = OPDLABLE
+        return att_s
+
     op_data = split_op_data(op_data)
     assert len(op_data) == 2
 
@@ -53,20 +60,21 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
     op_data_struct = []
     access_memory = []
     for data in op_data:
-        single_data = split_single_op_data(data)
+        single_data = split_single_op_data(data)  # debug this function error
+        print(single_data)
         assert len(single_data) == 6
         temp = OP_DATA(single_data[0],single_data[1],single_data[2],single_data[3],single_data[4])
         access_memory.append(single_data[5])
         op_data_struct.append(temp)
 
     att_s.source = op_data_struct[0]
-    if att_s.operand_size != 2:
-        att_s.destination = op_data_struct[1]
+    if att_s.operand_size == 2:
         if True not in access_memory:
             att_s.DataType = OPDREG
         else:
             att_s.DataType = OPDMEM
     else:
+        att_s.destination = op_data_struct[1]
         if True not in access_memory:
             att_s.DataType = OPDREGREG
         elif False not in access_memory:
@@ -105,57 +113,12 @@ def make_struct(ins_str):
         print("[+]: unknow instruction : "+ ins_str)
     return None
 
-
-def add_align(as_data):
-    global ks
-    ret = []
-    align = 32
-    for data in as_data:
-        s_line = data.strip()
-        if len(s_line) == 0:
-            ret.append(data)
-            continue
-        if s_line[0] == '.': # annotation
-            if ".align" in data:
-                continue
-            ret.append(data)
-            continue
-        if s_line[-1] == ':': # lable
-            ret.append("\t.align 32")
-            ret.append(data)
-            align = 32
-            continue
-        else:
-            log("add_align --> " + data)
-            if "endbr" in data[:6]:  # deal with endbra64 and endbra32 keystone can't solve
-                hard_code = [90]*4
-                count = 1
-            else:
-                try:
-                    hard_code,count = ks.asm(data)  # ks.asm return truple such as.([90,90],1L)
-                except keystone.KsError as err:
-                    log(err)
-                    print("[+]: "+data+"--> asm error amd I default using jmp lable: 7 byte code")
-                    hard_code = [90]*7
-                    count = 1 
-            assert count == 1
-            align -= len(hard_code)
-            if align < 0:
-                align += len(hard_code)
-                assert align >= 0
-                ret.append("\t.align 32")
-                align =  32-len(hard_code)
-                ret.append(data)
-            else:
-                ret.append(data)
-        
-    return ret
-
-
 def trans_str(att_list):
     s = []
     for att in att_list:
         att:ATT_Syntax
+        if att == None:
+            continue
         if att.Itype != ILABEL:
             s.append("\t" + att.ori_str)
         else:

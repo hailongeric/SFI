@@ -1,8 +1,8 @@
 # python 
-
 from utilities import expand_list
 from ins_struct import *
 from build_struct import make_struct
+from define import *
 
 DEBUG = False
 
@@ -13,94 +13,22 @@ def reg_swtich_low(reg):
     reg = reg.strip()
     return reg_low_table[reg]
 
-def if_in(op_list,op):
-    for i_op in op_list:
-        if i_op in op:
-            return True
-    
-    return False
-
-def add_memory_confine(ins_data):
-    ret = []
-    split_data = ins_data.strip()
-    split_data = split_data.split("\t")
-    op = split_data[0]
-    assert len(split_data) > 1
-    op_data = split_data[1]
-    op_data = op_data.split(',')  # TODO can't solve op (%rax, %rax, 1), %eax
-    op_src = op_data[0]
-    op_dst = op_data[1]
-    src_mem = re.findall(r"\d*\(.*\)",op_src)
-    if src_mem != None:
-        if re.findall(r"\d+\(",op_src) != None:  # is disp32 offset ?
-            offset = re.findall(r"\d+\(",op_src)[0][:-1]
-        else:
-            offset = "0"
-        reg = re.findall(r"\(\%.*\)",op_src)[0][1:-1]
-        # TODO reg_list = reg.split(',')  support  (%rax, %rax, 1)
-        if "r" in reg:  # is 64-bit reg ?
-            add_ins_0 = "mov\t"+ reg +", " + reg_swtich_low(reg)
-            add_ins_1 = op+"\t"+offset+"(%r13, " + reg +", 1)"
-            return [add_ins_0, add_ins_1]
-        else:
-            return ins_data
-
-    dst_mem = re.findall(r"\d*\(.*\)",op_dst)
-    # the same as above
-    if dst_mem != None:
-        if re.findall(r"\d+\(",op_dst) != None:  # is disp32 offset ?
-            offset = re.findall(r"\d+\(",op_dst)[0][:-1]
-        else:
-            offset = "0"
-        reg = re.findall(r"\(\%.*\)",op_dst)[0][1:-1]
-        # TODO reg_list = reg.split(',')  support  (%rax, %rax, 1)
-        if "r" in reg:  # is 64-bit reg ?
-            add_ins_0 = "mov\t"+ reg +", " + reg_swtich_low(reg)
-            add_ins_1 = op+"\t"+offset+"(%r13, " + reg +", 1)"
-            return [add_ins_0, add_ins_1]
-        else:
-            return ins_data
-
-def add_address_confinement(ins_data):
-    # TODO
-    split_data = ins_data.strip()
-    split_data = split_data.split("\t" )
-    if "%" in split_data[1]:
-        add_ins = "and\t0xffffffe0, "+split_data[1]
-        return 
-
-def add_confinement(instruction_data):
-    ret = []
-    for data in instruction_data:
-        split_data = data.strip()
-        split_data = split_data.split("\t")
-        op = split_data[0]
-        if op in [".file", ".text", ".type", ".size", ".ident", ".section", ".data", ".align", ".long"]:
-            ret.append(data)
-        elif op in ["endbr64","endbr32"]:
-            ret.append(data)
-        elif "mov" in op:
-            ret.append(add_memory_confine(data))
-        elif "add" in op:
-            ret.append(add_memory_confine(data))
-        elif "jmp" in op:
-            ret.append(add_address_confinement(data))
-
-    return ret
-
 # def memory_confine_base(op_data:OP_DATA):
-def memory_confine_base(op_data):
+def memory_confine_base(op_data:OP_DATA):
+    print(op_data)
     dst_dtype =  op_data.get_Dtype()
     if dst_dtype == 0x00100 or dst_dtype == 0x01100:   # also solve 0x01000
         base = op_data.base
-        s = "mov\t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
+        s = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         op_data.base = "%r13"
         op_data.index = base
+
+
         return [ s, op_data ]
     else:
         base = op_data.base
-        s = "lea\t" + str(op_data) +", " + base
-        s2 = "mov\t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
+        s = "lea \t" + str(op_data) +", " + base
+        s2 = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         ret_op_data = OP_DATA()
         ret_op_data.base = "%r13"
         ret_op_data.index = base
@@ -151,26 +79,84 @@ def memory_confine_MEMMEM(att:ATT_Syntax):
     return ret_att
     
 def memory_confine_MEM(att:ATT_Syntax):
-    return memory_confine_MEMREG(att)
+    att_list = memory_confine_MEMREG(att)
+    return att_list
 
 def memory_confine_IMEREG(att:ATT_Syntax):
     return att
 
+def jmpaddress_confine(att:ATT_Syntax):
+    if att.DataType == OPDMEM:
+        att_add_1 = make_struct("movl\t"+str(att.source).replace('*','')+", %edi")
+    else:
+        att_add_1 = make_struct("mov\t"+str(att.source.base).replace('*','')+", %edi")
+    att_add_2 = make_struct("andl\t$0xffffffe0, %edi")
+    att_add_3 = make_struct("addq\t%r13, %rdi")
+    att_add_4 = make_struct("jmp \t%rdi")
+    return [att_add_1, att_add_2, att_add_3, att_add_4]
+
 def add_sfi_main(att_list):
+    global OPDIMEREG,IINSTR,ILABEL,OPDREGMEM,OPDMEMMEM,OPDMEM,OPDMEMREG,OPDLABLE
     confin_fun = {
         OPDREGMEM : memory_confine_REGMEM,
         OPDMEMREG : memory_confine_MEMREG,
         OPDMEMMEM : memory_confine_MEMMEM,
         OPDMEM    : memory_confine_MEM,
-        OPDIMEREG : memory_confine_IMEREG
+        OPDIMEREG : memory_confine_IMEREG,
+        OPDLABLE  : jmpaddress_confine
     }
+
+    # how to solve lea:ISA 
     for index,att in enumerate(att_list):
         att:ATT_Syntax
-        if att.Itype == 3:
-            if att.DataType == OPDREG or att.DataType == OPDREGREG or att.DataType == OPDIMEREG:
+        if att.Itype == IINSTR and att.operand_size != 1:
+            if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE]:
                 continue
+            # ！！！
+            # 
+            #  special deal with leaq	.sfi_lable0(%rip),  %rax
+            if "lea" in att.op and att.DataType is OPDMEMREG:
+                continue
+            
             att_list[index] = confin_fun[att.DataType](att)
-        if att.Itype == 2:
-            if "jmp" in att.opp:
-                
-    return expand_list(att_list)
+
+    att_list =  expand_list(att_list)
+
+    for index,att in enumerate(att_list):
+        att:ATT_Syntax
+        if att.Itype == IINSTR and "jmp" in att.op and att.DataType != OPDLABLE :
+            att_list[index] = jmpaddress_confine(att)
+
+    att_list = expand_list(att_list)
+    ret_att = []
+    for att in att_list:
+        att.update_str()
+        ret_att.append(att)
+
+    print([str(i) for i in ret_att])
+    return ret_att
+    
+
+def add_align(att_list):
+    ret_att = []
+    align = 32
+    for att in att_list:
+        att:ATT_Syntax
+        if att.Itype == ILABEL:
+            ret_att.append(make_struct(".align 32"))
+            ret_att.append(att)
+            align =  32
+            continue
+        c_size = att.get_opcode_size()
+        align -= c_size
+        if align < 0:
+            align += c_size
+            assert align >= 0
+            ret_att.append(make_struct(".align 32"))
+            align =  32 - c_size
+            ret_att.append(att)
+        else:
+            ret_att.append(att)
+        
+    return ret_att
+
