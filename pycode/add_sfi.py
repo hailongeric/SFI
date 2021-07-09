@@ -94,7 +94,7 @@ def jmpaddress_confine(att:ATT_Syntax):
         att_add_1 = make_struct("mov\t"+str(att.source.base).replace('*','')+", %edi")
     att_add_2 = make_struct("andl\t$0xffffffe0, %edi")
     att_add_3 = make_struct("addq\t%r13, %rdi")
-    att_add_4 = make_struct("jmp \t%rdi")
+    att_add_4 = make_struct("jmp \t*%rdi")
     return [att_add_1, att_add_2, att_add_3, att_add_4]
 
 def add_sfi_main(att_list):
@@ -135,7 +135,7 @@ def add_sfi_main(att_list):
         att.update_str()
         ret_att.append(att)
 
-    print([str(i) for i in ret_att])
+    # print([str(i) for i in ret_att])
     return ret_att
     
 

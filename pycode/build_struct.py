@@ -34,8 +34,9 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
     Dtype   ->        0x        1      1        1      1     1 
 
     """
-    op = ins_str.split("\t")[0]
-    op_data = ins_str.split("\t")[1]
+    # op = ins_str.split("\t")[0]
+    # op_data = ins_str.split("\t")[1]
+    op,op_data = split_op_opdata(ins_str)
 
     att_s.ori_str = ins_str
     att_s.Itype = IINSTR
@@ -61,7 +62,7 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
     access_memory = []
     for data in op_data:
         single_data = split_single_op_data(data)  # debug this function error
-        print(single_data)
+        # print(single_data)
         assert len(single_data) == 6
         temp = OP_DATA(single_data[0],single_data[1],single_data[2],single_data[3],single_data[4])
         access_memory.append(single_data[5])
@@ -103,12 +104,14 @@ def make_struct(ins_str):
     if ins_len == 1:
         if ins_str[-1] == ":" and ins_str[0] != "#":
             return struct_lable(ins_str, att_s) # lable type 1
-        else:
+        elif "%" not in ins_str:
             return struct_instruction_1(ins_str, att_s) # instruction type 3
+        else:
+            return struct_instruction_2(ins_str,att_s)
 
     if ins_len == 2:
         if ins_list[0][0] != "." and ins_list[0][0] != "#":
-            log(ins_list)
+            # log(ins_list)
             return struct_instruction_2(ins_str,att_s)
         else:
             print("[+]: unknow instruction : "+ ins_str)
@@ -122,7 +125,9 @@ def trans_str(att_list):
         att:ATT_Syntax
         if att == None:
             continue
-        if att.Itype != ILABEL:
+        if att.Itype == IANNOT and att.op[0] == '#':
+            s.append(att.ori_str)
+        elif att.Itype != ILABEL:
             s.append("\t" + att.ori_str)
         else:
             s.append(att.ori_str)

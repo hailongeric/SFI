@@ -81,17 +81,24 @@ class ATT_Syntax:
         global IINSTR
         ks = Ks(KS_ARCH_X86, KS_MODE_64)
         ks.syntax = KS_OPT_SYNTAX_ATT
+
+        # !!! in special 
+        # endbr64 and endbr32 
+        # lea lable(%rip), %reg
+
         if self.Itype != IINSTR:
             return 0
         if "endbr" in self.op:  # endbr64 / endbr32 not recongnition by ks.asm
             return 4
+        if "lea" in self.op and self.DataType == OPDMEMREG:
+            return 7
         try:
             print(self.ori_str)
             hard_code,count = ks.asm(self.ori_str)  # ks.asm return truple such as.([90,90],1L)
         except keystone.KsError as err:
             log(err)
-            print("[+]: "+self.ori_str+"--> asm error amd I default using jmp lable: 7 byte code")
-            hard_code = [90]*7
+            print("[+]: "+self.ori_str+"  --> asm error amd I default using jmp lable: 5 byte code")
+            hard_code = [90]*5
             count = 1 
         assert count == 1
         return len(hard_code)

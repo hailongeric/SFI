@@ -35,10 +35,10 @@ def ch_syscall(att:ATT_Syntax):
     """
     global SFI_ADD_LABLE_NUM
     att_add_0 = make_struct("subq\t$8, %r15")
-    att_add_1 = make_struct("lea \t.sfi_lable2{}(%rip), %rbx".format(SFI_ADD_LABLE_NUM))
+    att_add_1 = make_struct("lea \t.sfi_lable{}(%rip), %rbx".format(SFI_ADD_LABLE_NUM))
     att_add_2 = make_struct("movq\t%rbx, (%r15)")
     att_add_3 = make_struct("ret")
-    att_add_4 = make_struct(".sfi_lable2{}:".format(SFI_ADD_LABLE_NUM))
+    att_add_4 = make_struct(".sfi_lable{}:".format(SFI_ADD_LABLE_NUM))
     SFI_ADD_LABLE_NUM += 1
     return [att_add_0, att_add_1, att_add_2, att_add_3, att_add_4]
 

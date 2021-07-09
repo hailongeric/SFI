@@ -70,7 +70,7 @@ def split_single_op_data(s):
     if "(" not in s:
         base = s
     else:
-        print(s)
+        # print(s)
         s_offset = s.split("(")[0]
         s = s.split("(")[1]
         assert s[-1] == ")"
@@ -93,6 +93,22 @@ def split_op_data(s):
         if c == ')':
             bracket = False
     return [s,""]
+
+def split_op_opdata(ins_str):
+    op = ""
+    op_data = ""
+    if "\t" in ins_str:
+        op = ins_str.split("\t")[0]
+        op_data = ins_str.split("\t")[1]
+    else:
+        for i,c in enumerate(ins_str):
+            if c == ' ':
+                op = ins_str[:i]
+                op_data = ins_str[i+1:]
+                break
+    assert len(op) > 0
+    assert len(op_data) > 0
+    return op, op_data
 
 # orginal code 
 # def split_file_data(s):
