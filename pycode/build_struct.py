@@ -97,6 +97,9 @@ def make_struct(ins_str):
     if ins_str[0] == "." and ins_str[-1] != ":":
             return struct_annotation(ins_str, att_s) # annotation type 2
 
+    if ins_str[0] == "#":
+            return struct_annotation(ins_str, att_s) # annotation type 2
+
     if ins_len == 1:
         if ins_str[-1] == ":" and ins_str[0] != "#":
             return struct_lable(ins_str, att_s) # lable type 1

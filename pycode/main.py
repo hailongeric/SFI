@@ -5,12 +5,12 @@ from ins_struct import *
 from utilities import * 
 from ch_reg_function import *
 from build_struct import *
+from define import SFI_ADD_LABLE_NUM
 
 def main_main(s_list):
     att_list = []
     log("   [+]: parse assemble code...")
     for ins in s_list:
-        # print(str(make_struct(ins)))
         att_list.append(make_struct(ins))
     log("   [+]: solve jump instrcution")
     att_list = solve_jump_ins_main(att_list)
@@ -46,7 +46,15 @@ def main(argv):
 
     # ！！！ in special    jmp * don't using in static shared object
     s = s.replace('*',' ')
+    # !!! in special ret recover using .???
+    s = s.replace('.???','ret')
+    # !!! in special support syscall
+    # 
+    # global SFI_ADD_LABLE_NUM
+ 
+    # s = s.replace("syscall\n","subq\t$8, %r15\n\tlea \t.sfi_lable2{}(%rip), %rbx\n\tmovq\t%rbx, (%r15)\n\tret\n.sfi_lable2{}:\n".format(SFI_ADD_LABLE_NUM,SFI_ADD_LABLE_NUM))
 
+    # SFI_ADD_LABLE_NUM += 1 
     write_file_line(s,out_filename)
     log("[+]: Done !!!")
     return

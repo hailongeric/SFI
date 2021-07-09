@@ -32,16 +32,17 @@ def assert_condition(s):
     
     if "r15" in s or "r14" in s or "r13" in s:
         return False
+
+    # !!! in special syscall communitcate    
+    # if "syscall" in s:
+    #     return False
     
-    if "syscall" in s:
-        return False
-    
-    # !!! in special %rip can't place destination
+    # !!! in special %rip can't place destination in opdata
     s = s.split("\n")
     for c in s:
         if "rip" in c:
-            t = split_op_data(c)
-            if "rip" in t[1]:
+            t = c.split(',')[-1]
+            if "rip" in t and "(" not in t:
                 return False
 
     return True
@@ -93,11 +94,30 @@ def split_op_data(s):
             bracket = False
     return [s,""]
 
+# orginal code 
+# def split_file_data(s):
+#     s = s.split('\n')
+#     ret = []
+#     for i in s:
+#         if len(i.strip()) == 0:
+#             continue
+#         ret.append(i)
+#     return ret
+# above orignal code 
+# !!! in special add ret in global 
 def split_file_data(s):
     s = s.split('\n')
     ret = []
+    RET_FLAG = False
     for i in s:
         if len(i.strip()) == 0:
+            continue
+        if ".globl" in i:
+            RET_FLAG = True
+        if RET_FLAG and 'ret' in i:
+            # replace ret using .???
+            ret.append(i.replace('ret','.???'))
+            RET_FLAG = False
             continue
         ret.append(i)
     return ret

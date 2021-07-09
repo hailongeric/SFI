@@ -15,15 +15,17 @@ def reg_swtich_low(reg):
 
 # def memory_confine_base(op_data:OP_DATA):
 def memory_confine_base(op_data:OP_DATA):
-    print(op_data)
+    # print(op_data)
+
+    # !!! in special deal with mov lable(%rip), %reg
+    if "rip" in str(op_data):
+        return [op_data]
     dst_dtype =  op_data.get_Dtype()
     if dst_dtype == 0x00100 or dst_dtype == 0x01100:   # also solve 0x01000
         base = op_data.base
         s = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         op_data.base = "%r13"
         op_data.index = base
-
-
         return [ s, op_data ]
     else:
         base = op_data.base
@@ -71,7 +73,7 @@ def memory_confine_MEMMEM(att:ATT_Syntax):
     dst_data =  att.destination
     dst_data:OP_DATA
     ret_data = memory_confine_base(dst_data)
-    att.destination = ret_data[-1]
+    att.destination = ret_data[-1] 
     ret_data = ret_data[:-1]
     for s in ret_data:
         ret_att.append(make_struct(s))

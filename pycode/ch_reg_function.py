@@ -23,6 +23,26 @@ def replace_stack_reg(s):
     s = s.replace("%ebp","%r14d")
     return s
 
+def ch_syscall(att:ATT_Syntax):
+    """
+    s = s.replace("syscall\n",
+    "subq\t$8, %r15\n
+    \tlea \t.sfi_lable2{}(%rip), %rbx\n
+    \tmovq\t%rbx, (%r15)\n
+    \tret\n
+    .sfi_lable2{}:
+    \n".format(SFI_ADD_LABLE_NUM,SFI_ADD_LABLE_NUM))
+    """
+    global SFI_ADD_LABLE_NUM
+    att_add_0 = make_struct("subq\t$8, %r15")
+    att_add_1 = make_struct("lea \t.sfi_lable2{}(%rip), %rbx".format(SFI_ADD_LABLE_NUM))
+    att_add_2 = make_struct("movq\t%rbx, (%r15)")
+    att_add_3 = make_struct("ret")
+    att_add_4 = make_struct(".sfi_lable2{}:".format(SFI_ADD_LABLE_NUM))
+    SFI_ADD_LABLE_NUM += 1
+    return [att_add_0, att_add_1, att_add_2, att_add_3, att_add_4]
+
+
 def ch_push(att:ATT_Syntax):
     """
     # modify push instruction
@@ -102,8 +122,11 @@ def ch_leave(att:ATT_Syntax):
 def solve_jump_ins_main(att_list):
 
     for index,att in enumerate(att_list):
+        
         if att.Itype == 3:
-            if "push" in  att.op:
+            if "syscall" in att.op:
+                att_list[index] = ch_syscall(att)
+            elif "push" in  att.op:
                 att_list[index] = ch_push(att)
             elif "pop" in att.op:
                 att_list[index] = ch_pop(att)
