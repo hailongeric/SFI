@@ -1,6 +1,6 @@
 # python 
 from utilities import expand_list
-from ins_struct import *
+from assem_struct import *
 from build_struct import make_struct
 from define import *
 
@@ -14,7 +14,7 @@ def reg_swtich_low(reg):
     return reg_low_table[reg]
 
 # def memory_confine_base(op_data:OP_DATA):
-def memory_confine_base(op_data:OP_DATA):
+def memory_confine_base(op_data:OPD):
     # print(op_data)
 
     # !!! in special deal with mov lable(%rip), %reg
@@ -26,22 +26,35 @@ def memory_confine_base(op_data:OP_DATA):
         s = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         op_data.base = "%r13"
         op_data.index = base
+
+        # !!! in special  solve push and pop rsp rbp check 
+        # unnecessary checking 
+
+        # if "r14" in s or "r15" in s:
+        #     return [op_data]
+        # else:
         return [ s, op_data ]
     else:
         base = op_data.base
         s = "lea \t" + str(op_data) +", " + base
         s2 = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
-        ret_op_data = OP_DATA()
+        ret_op_data = OPD()
         ret_op_data.base = "%r13"
         ret_op_data.index = base
         ret_op_data.scale = "1"
+        # !!! in special  solve push and pop rsp rbp check 
+        # unnecessary checking 
+
+        # if "r14" in s or "r15" in s:
+        #     return [s, ret_op_data]
+        # else:
         return [s, s2, ret_op_data]
         
-def memory_confine_REGMEM(att:ATT_Syntax):
-    dst_data =  att.destination
-    dst_data:OP_DATA
+def memory_confine_REGMEM(att:ATTASM):
+    dst_data =  att.dst_opd
+    dst_data:OPD
     ret_data = memory_confine_base(dst_data)
-    att.destination = ret_data[-1]
+    att.dst_opd = ret_data[-1]
     ret_data = ret_data[:-1]
     ret_att = []
     for s in ret_data:
@@ -49,11 +62,11 @@ def memory_confine_REGMEM(att:ATT_Syntax):
     ret_att.append(att)
     return ret_att
 
-def memory_confine_MEMREG(att:ATT_Syntax):
-    src_data =  att.source
-    src_data:OP_DATA
+def memory_confine_MEMREG(att:ATTASM):
+    src_data =  att.src_opd
+    src_data:OPD
     ret_data = memory_confine_base(src_data)
-    att.source = ret_data[-1]
+    att.src_opd = ret_data[-1]
     ret_data = ret_data[:-1]
     ret_att = []
     for s in ret_data:
@@ -61,39 +74,39 @@ def memory_confine_MEMREG(att:ATT_Syntax):
     ret_att.append(att)
     return ret_att
 
-def memory_confine_MEMMEM(att:ATT_Syntax):
-    src_data =  att.source
-    src_data:OP_DATA
+def memory_confine_MEMMEM(att:ATTASM):
+    src_data =  att.src_opd
+    src_data:OPD
     ret_data = memory_confine_base(src_data)
-    att.source = ret_data[-1]
+    att.src_opd = ret_data[-1]
     ret_data = ret_data[:-1]
     ret_att = []
     for s in ret_data:
         ret_att.append(make_struct(s))
-    dst_data =  att.destination
-    dst_data:OP_DATA
+    dst_data =  att.dst_opd
+    dst_data:OPD
     ret_data = memory_confine_base(dst_data)
-    att.destination = ret_data[-1] 
+    att.dst_opd = ret_data[-1] 
     ret_data = ret_data[:-1]
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
     return ret_att
     
-def memory_confine_MEM(att:ATT_Syntax):
+def memory_confine_MEM(att:ATTASM):
     att_list = memory_confine_MEMREG(att)
     return att_list
 
-def memory_confine_IMEREG(att:ATT_Syntax):
+def memory_confine_IMEREG(att:ATTASM):
     return att
 
-def jmpaddress_confine(att:ATT_Syntax):
+def jmpaddress_confine(att:ATTASM):
     if att.DataType == OPDMEM:
-        att_add_1 = make_struct("movl\t"+str(att.source).replace('*','')+", %edi")
+        att_add_1 = make_struct("movl\t"+str(att.src_opd).replace('*','')+", %edi")
     else:
-        att_add_1 = make_struct("mov\t"+str(att.source.base).replace('*','')+", %edi")
+        att_add_1 = make_struct("mov\t"+str(att.src_opd.base).replace('*','')+", %edi")
     att_add_2 = make_struct("andl\t$0xffffffe0, %edi")
-    att_add_3 = make_struct("addq\t%r13, %rdi")
+    att_add_3 = make_struct("lea \t(%r13, %rdi, 1), %rdi")
     att_add_4 = make_struct("jmp \t*%rdi")
     return [att_add_1, att_add_2, att_add_3, att_add_4]
 
@@ -110,7 +123,8 @@ def add_sfi_main(att_list):
 
     # how to solve lea:ISA 
     for index,att in enumerate(att_list):
-        att:ATT_Syntax
+        att:ATTASM
+        # print(att)
         if att.Itype == IINSTR and att.operand_size != 1:
             if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE]:
                 continue
@@ -125,7 +139,7 @@ def add_sfi_main(att_list):
     att_list =  expand_list(att_list)
 
     for index,att in enumerate(att_list):
-        att:ATT_Syntax
+        att:ATTASM
         if att.Itype == IINSTR and "jmp" in att.op and att.DataType != OPDLABLE :
             att_list[index] = jmpaddress_confine(att)
 
@@ -143,7 +157,7 @@ def add_align(att_list):
     ret_att = []
     align = 32
     for att in att_list:
-        att:ATT_Syntax
+        att:ATTASM
         if att.Itype == ILABEL:
             ret_att.append(make_struct(".align 32"))
             ret_att.append(att)

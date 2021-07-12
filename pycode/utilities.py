@@ -81,7 +81,7 @@ def split_single_op_data(s):
             index = s[1]
         if len(s) > 2:
             scale = s[2]
-    return [segement_overwrite,s_offset,base,index,scale, access]
+    return [segement_overwrite.strip(),s_offset.strip(),base.strip(),index.strip(),scale.strip(), access]
 
 def split_op_data(s):
     bracket = False

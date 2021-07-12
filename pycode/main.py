@@ -1,7 +1,7 @@
 
 from add_sfi import *
 import sys
-from ins_struct import *
+from assem_struct import *
 from utilities import * 
 from ch_reg_function import *
 from build_struct import *
@@ -46,7 +46,7 @@ def main(argv):
     # ！！！ in special    jmp * don't using in static shared object
     s = s.replace('*',' ')
     # !!! in special ret recover using .???
-    s = s.replace('.???','ret')
+    s = s.replace('.???','movq\t%rax, %rdi\n\tmovl\t$0x1000, %eax\n\tret')
   
     write_file_line(s,out_filename)
     log("[+]: Done !!!")

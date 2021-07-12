@@ -1,32 +1,35 @@
 # python 
 
-from ins_struct import *
+from assem_struct import *
 from utilities import *
 from define import *
 
 
 def struct_lable(ins_str,att_s):
-    att_s.ori_str = ins_str
+    att_s.assem_str = ins_str
+    att_s.orignal_str = ins_str
     att_s.Itype = ILABEL
     att_s.operand_size =  1
     att_s.op = ins_str
     return att_s
 
 def struct_annotation(ins_str,att_s):
-    att_s.ori_str = ins_str
+    att_s.assem_str = ins_str
+    att_s.orignal_str = ins_str
     att_s.Itype = IANNOT
     att_s.operand_size =  1
     att_s.op = ins_str
     return att_s
 
 def struct_instruction_1(ins_str,att_s):  # single operand 
-    att_s.ori_str = ins_str
+    att_s.assem_str = ins_str
+    att_s.orignal_str = ins_str
     att_s.Itype = IINSTR
     att_s.operand_size =  1
     att_s.op = ins_str
     return att_s
 
-def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
+def struct_instruction_2(ins_str,att_s:OPD): #  multi operand
     # TODO add some it is 2 op_size
     """
     op_data Dtype 
@@ -37,8 +40,10 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
     # op = ins_str.split("\t")[0]
     # op_data = ins_str.split("\t")[1]
     op,op_data = split_op_opdata(ins_str)
+    # log("error+ op " + op + " opdata --> " +op_data)
 
-    att_s.ori_str = ins_str
+    att_s.assem_str = ins_str
+    att_s.orignal_str = ins_str
     att_s.Itype = IINSTR
     att_s.op = op
 
@@ -50,6 +55,7 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
         return att_s
 
     op_data = split_op_data(op_data)
+    # log("opdata list --> "+str(op_data))
     assert len(op_data) == 2
 
     if len(op_data[1]) == 0:
@@ -64,18 +70,18 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
         single_data = split_single_op_data(data)  # debug this function error
         # print(single_data)
         assert len(single_data) == 6
-        temp = OP_DATA(single_data[0],single_data[1],single_data[2],single_data[3],single_data[4])
+        temp = OPD(single_data[0],single_data[1],single_data[2],single_data[3],single_data[4])
         access_memory.append(single_data[5])
         op_data_struct.append(temp)
 
-    att_s.source = op_data_struct[0]
+    att_s.src_opd = op_data_struct[0]
     if att_s.operand_size == 2:
         if True not in access_memory:
             att_s.DataType = OPDREG
         else:
             att_s.DataType = OPDMEM
     else:
-        att_s.destination = op_data_struct[1]
+        att_s.dst_opd = op_data_struct[1]
         if True not in access_memory:
             att_s.DataType = OPDREGREG
         elif False not in access_memory:
@@ -88,7 +94,7 @@ def struct_instruction_2(ins_str,att_s:OP_DATA): #  multi operand
 
 def make_struct(ins_str):
     #self.count += 1
-    att_s =  ATT_Syntax()
+    att_s =  ATTASM()
     ins_str = ins_str.strip()
     ins_list = ins_str.split('\t')
     ins_len = len(ins_list)
@@ -122,14 +128,14 @@ def make_struct(ins_str):
 def trans_str(att_list):
     s = []
     for att in att_list:
-        att:ATT_Syntax
+        att:ATTASM
         if att == None:
             continue
         if att.Itype == IANNOT and att.op[0] == '#':
-            s.append(att.ori_str)
+            s.append(att.assem_str)
         elif att.Itype != ILABEL:
-            s.append("\t" + att.ori_str)
+            s.append("\t" + att.assem_str)
         else:
-            s.append(att.ori_str)
+            s.append(att.assem_str)
     return '\n'.join(s)
 
