@@ -5,7 +5,7 @@ from utilities import *
 from define import *
 
 
-def struct_lable(ins_str,att_s):
+def struct_lable(ins_str,att_s:ATTASM):
     att_s.assem_str = ins_str
     att_s.orignal_str = ins_str
     att_s.Itype = ILABEL
@@ -13,7 +13,7 @@ def struct_lable(ins_str,att_s):
     att_s.op = ins_str
     return att_s
 
-def struct_annotation(ins_str,att_s):
+def struct_annotation(ins_str,att_s:ATTASM):
     att_s.assem_str = ins_str
     att_s.orignal_str = ins_str
     att_s.Itype = IANNOT
@@ -21,7 +21,7 @@ def struct_annotation(ins_str,att_s):
     att_s.op = ins_str
     return att_s
 
-def struct_instruction_1(ins_str,att_s):  # single operand 
+def struct_instruction_1(ins_str,att_s:ATTASM):  # single operand 
     att_s.assem_str = ins_str
     att_s.orignal_str = ins_str
     att_s.Itype = IINSTR
@@ -29,7 +29,7 @@ def struct_instruction_1(ins_str,att_s):  # single operand
     att_s.op = ins_str
     return att_s
 
-def struct_instruction_2(ins_str,att_s:OPD): #  multi operand
+def struct_instruction_2(ins_str,att_s:ATTASM): #  multi operand
     # TODO add some it is 2 op_size
     """
     op_data Dtype 
@@ -83,7 +83,10 @@ def struct_instruction_2(ins_str,att_s:OPD): #  multi operand
     else:
         att_s.dst_opd = op_data_struct[1]
         if True not in access_memory:
-            att_s.DataType = OPDREGREG
+            if "%" not in op_data[0]:
+                att_s.DataType = OPDIMEREG
+            else:
+                att_s.DataType = OPDREGREG
         elif False not in access_memory:
             att_s.DataType = OPDMEMMEM
         elif access_memory[0] == True:
@@ -110,6 +113,7 @@ def make_struct(ins_str):
     if ins_len == 1:
         if ins_str[-1] == ":" and ins_str[0] != "#":
             return struct_lable(ins_str, att_s) # lable type 1
+        #!!! no tab as separative sign
         elif "%" not in ins_str:
             return struct_instruction_1(ins_str, att_s) # instruction type 3
         else:

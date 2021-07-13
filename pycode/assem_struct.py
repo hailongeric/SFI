@@ -81,6 +81,7 @@ class ATTASM:
         
         # TODO add some attach information to inform add SFI information
         self.orignal_str = ""
+        self.sfi_stack =  True  #!! default true and must modify and if it 's false no need modify
 
         self.opcode_size = self.__opcode_size__()  # don't suggest use this attribute
 

@@ -15,6 +15,8 @@ def expand_list(s):
         s =  ret
         ret = []
         for i in s:
+
+            
             if type(i) == list:
                 flag = False
                 for j in i:
