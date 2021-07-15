@@ -1,11 +1,12 @@
 # python 
 from ch_reg_function import assign_orig_str
-from utilities import expand_list
+from utilities import expand_list, Fdebug
 from assem_struct import *
 from build_struct import make_struct
 from define import *
 
 DEBUG = False
+
 
 op_list = ["push", "mov", "add", "cmp", "jmp", "sub", "mul", "div", "rcp", "sqrt", "rsqrt", "lea", "call", "load", ""]
 special_op = ["aaa"]
@@ -64,6 +65,7 @@ def memory_confine_base(op_data:OPD):
         ret_op_data.base = "%r13"
         ret_op_data.index = base
         ret_op_data.scale = "1"
+        ret_op_data.accesss_memory = True
         # !!! in special  solve push and pop rsp rbp check 
         # unnecessary checking 
 
@@ -85,10 +87,12 @@ def memory_confine_REGMEM(att:ATTASM):
     return assign_orig_str(ret_att, att.orignal_str)
 
 def memory_confine_MEMREG(att:ATTASM):
+    # print(".........................")
     if is_stack_op(att):
         return confinemnet_stack_point(att)
     src_data =  att.src_opd
     src_data:OPD
+
     ret_data = memory_confine_base(src_data)
     att.src_opd = ret_data[-1]
     ret_data = ret_data[:-1]
@@ -96,6 +100,7 @@ def memory_confine_MEMREG(att:ATTASM):
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
+    # print([str(i) for i in ret_att])
     return assign_orig_str(ret_att, att.orignal_str)
 
 def memory_confine_MEMMEM(att:ATTASM):
@@ -124,7 +129,11 @@ def memory_confine_MEM(att:ATTASM):
 def memory_confine_IMEREG(att:ATTASM):
     return att
 
+def memory_confine_IMEMEMREG(att:ATTASM):
+    return memory_confine_REGMEM(att)
+
 def jmpaddress_confine(att:ATTASM):
+    Fdebug("jmpaddress_confine:--> " +str(att.src_opd))
     if att.DataType == OPDMEM:
         att_add_1 = make_struct("movl\t"+str(att.src_opd).replace('*','')+", %edi")
     else:
@@ -135,7 +144,6 @@ def jmpaddress_confine(att:ATTASM):
     return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4], att.orignal_str)
 
 def confinemnet_stack_point(att:ATTASM):
-    print(str(att))
     # MEMREG OR REGEREG
     if att.DataType == OPDREGREG:
         if "r14" in str(att.src_opd) or "r15" in str(att.src_opd):
@@ -166,6 +174,7 @@ def add_sfi_main(att_list):
         OPDMEMMEM : memory_confine_MEMMEM,
         OPDMEM    : memory_confine_MEM,
         OPDIMEREG : memory_confine_IMEREG,
+        OPDIMEMEMREG: memory_confine_IMEMEMREG,
         OPDLABLE  : jmpaddress_confine
     }
 
@@ -178,7 +187,7 @@ def add_sfi_main(att_list):
             continue
 
         if att.Itype == IINSTR and att.operand_size != 1:
-            if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE]:
+            if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE, OPDIMEREGREG]:
                 if is_stack_op(att):
                     att_list[index] = confinemnet_stack_point(att)
                 continue

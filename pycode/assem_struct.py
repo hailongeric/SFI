@@ -1,9 +1,11 @@
 # python
 from keystone import *
 from define import *
+import re
 from utilities import log
 
 
+# !!! attention keystone use hex data default
 class OPD:
     """
     op_data Dtype 
@@ -27,6 +29,8 @@ class OPD:
     def __str__(self):
         # !!! must be access memory instruction
         s = ""
+        if self.accesss_memory == False:
+            return self.base
         if len(self.segment_override.strip()) != 0:
             s += self.segment_override + ":"
         s += self.s_offset + "("
@@ -69,7 +73,7 @@ class ATTASM:
         # 3 src --> memory, dst --> register
         # 4 src --> memory, dst --> memory
     """
-    def __init__(self,assem_str="", Itype = 0, operand_size = 0 , DataType = 0, op = "" , source = OPD(), destination = OPD()):
+    def __init__(self,assem_str="", Itype = 0, operand_size = 0 , DataType = 0, op = "" , source = OPD(), destination = OPD(), third_opd = OPD()):
         self.assem_str = assem_str
         self.Itype = Itype 
         self.operand_size = operand_size
@@ -78,10 +82,11 @@ class ATTASM:
         self.jmp_lable= ""
         self.src_opd = source
         self.dst_opd = destination
+        self.third_opd = third_opd
         
         # TODO add some attach information to inform add SFI information
         self.orignal_str = ""
-        self.sfi_stack =  True  #!! default true and must modify and if it 's false no need modify
+        self.sfi_stack =  True  #!! default true and must modify and if it's false no need modify
 
         self.opcode_size = self.__opcode_size__()  # don't suggest use this attribute
 
@@ -101,8 +106,11 @@ class ATTASM:
         if "lea" in self.op and self.DataType == OPDMEMREG:
             return 7
         try:
-            # print(self.assem_str)
-            hard_code,count = ks.asm(self.assem_str)  # ks.asm return truple such as.([90,90],1L)
+            t_s = self.assem_str
+            if "$" in self.assem_str:
+                o_s = re.findall(r'\-?\d+',t_s)[0]
+                t_s = t_s.replace(o_s, hex(int(o_s)).replace("0x",''))
+            hard_code,count = ks.asm(t_s)  # ks.asm return truple such as.([90,90],1L)
         except keystone.KsError as err:
             log(err)
             print("[+]: "+self.assem_str+"  --> asm error amd I default using jmp lable: 5 byte code")
@@ -114,8 +122,9 @@ class ATTASM:
     def get_opcode_size(self):
         self.opcode_size = self.__opcode_size__()
         return self.opcode_size 
+
     def __str__(self):  # use debug
-        return str([self.Itype,self.assem_str,self.operand_size,self.DataType,str(self.src_opd),str(self.dst_opd)])
+        return str([self.Itype,self.assem_str,self.operand_size,self.DataType,str(self.src_opd),str(self.dst_opd), str(self.third_opd)])
     
     def update_str(self):
         if self.Itype != IINSTR or self.operand_size == 1 or self.DataType == OPDIMEREG:
@@ -126,18 +135,21 @@ class ATTASM:
         s = self.op
         s += '\t'
 
-        strr = {OPDREGREG: lambda x,y:x.base +', '+ y.base,
-                OPDREGMEM: lambda x,y:x.base +', '+ str(y),
-                OPDMEMREG: lambda x,y:str(x) +', '+ y.base,
-                OPDMEMMEM: lambda x,y:str(x) +', '+ str(y)
+        strr = {OPDREGREG: lambda x,y,z:x.base +', '+ y.base,
+                OPDREGMEM: lambda x,y,z:x.base +', '+ str(y),
+                OPDMEMREG: lambda x,y,z:str(x) +', '+ y.base,
+                OPDMEMMEM: lambda x,y,z:str(x) +', '+ str(y),
+                OPDIMEREGREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z),
+                OPDIMEMEMREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z)
                 }
         if self.operand_size == 2:
-            if self.DataType == OPDREG:
-                s += self.src_opd.base
-            else:
-                s += str(self.src_opd)
+            # if self.DataType == OPDREG:
+            #     s += self.src_opd.base
+            # else:
+            #    s += str(self.src_opd)
+            s += str(self.src_opd)
         else:
-            s += strr[self.DataType](self.src_opd,self.dst_opd)
+            s += strr[self.DataType](self.src_opd,self.dst_opd, self.third_opd)
             
         self.assem_str = s
         return
