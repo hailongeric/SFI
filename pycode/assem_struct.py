@@ -1,4 +1,5 @@
 # python
+from enum import EnumMeta
 from keystone import *
 from define import *
 import re
@@ -110,6 +111,12 @@ class ATTASM:
             if "$" in self.assem_str:
                 o_s = re.findall(r'\-?\d+',t_s)[0]
                 t_s = t_s.replace(o_s, hex(int(o_s)).replace("0x",''))
+            if len(re.findall(r'[\,\s]\-?\d+\(',t_s)) != 0:
+                o_s = re.findall(r'[\,\s]\-?\d+\(',t_s) 
+                o_s = [i[1:-1] for i in o_s]
+                r_s = [hex(int(i)).replace("0x",'') for i in o_s]
+                for o,r in zip(o_s,r_s):
+                    t_s = t_s.replace(o,r)
             hard_code,count = ks.asm(t_s)  # ks.asm return truple such as.([90,90],1L)
         except keystone.KsError as err:
             log(err)
