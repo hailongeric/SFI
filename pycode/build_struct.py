@@ -56,10 +56,8 @@ def struct_instruction_operand(ins_str,att_s:ATTASM): #  multi operand
     op_data_struct = []
     access_memory = []
     if len(op_data) == 1:
-        print(ins_str)
         att_s.operand_size = 2
         single_data = split_single_op_data(op_data[0])  # debug this function error
-        print(single_data)
         assert len(single_data) == 6
         opd = OPD(single_data[0],single_data[1],single_data[2],single_data[3],single_data[4])
         opd.accesss_memory = single_data[5]
@@ -110,8 +108,11 @@ def struct_instruction_operand(ins_str,att_s:ATTASM): #  multi operand
         if True not in access_memory:
             if "%" not in op_data[0]:
                 att_s.DataType = OPDIMEREGREG
+            elif "%" not in op_data[1]:
+                att_s.DataType = OPDREGIMEREG
             else:
-                print("[!!!] error three operand variant and the first variant isn't ime")
+                att_s.DataType = OPDREGREGREG
+                # print("[!!!] error three operand variant and the first variant isn't ime")
         elif access_memory[1] == True :
             att_s.DataType = OPDIMEMEMREG
         else:

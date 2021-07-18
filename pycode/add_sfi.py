@@ -34,7 +34,6 @@ def is_stack_op(att:ATTASM):
 
 # def memory_confine_base(op_data:OP_DATA):
 def memory_confine_base(op_data:OPD):
-    # print(op_data)
 
     # !!! in special deal with mov lable(%rip), %reg
     if "rip" in str(op_data):
@@ -42,24 +41,23 @@ def memory_confine_base(op_data:OPD):
     dst_dtype =  op_data.get_Dtype()
     if dst_dtype == 0x00100 or dst_dtype == 0x01100:   # also solve 0x01000
         base = op_data.base
-        print("base--> "+base)
         if "r14" in base or "r15" in base:
-            print("h")
             return [op_data]
         s = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         op_data.base = "%r13"
         op_data.index = base
 
         # !!! in special  solve push and pop rsp rbp check 
-        # unnecessary checking 
-
-        # if "r14" in s or "r15" in s:
-        #     return [op_data]
-        # else:
         return [s, op_data ]
     else:
         base = op_data.base
+        # TODO judge if stack register
         s = "lea \t" + str(op_data) +", " + base
+        if "r14" in base or "r15" in base:
+            if "%" in op_data.index:
+                base = op_data.index
+        s = "lea \t" + str(op_data) +", " + base
+
         s2 = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         ret_op_data = OPD()
         ret_op_data.base = "%r13"
@@ -138,10 +136,13 @@ def jmpaddress_confine(att:ATTASM):
         att_add_1 = make_struct("movl\t"+str(att.src_opd).replace('*','')+", %edi")
     else:
         att_add_1 = make_struct("mov\t"+str(att.src_opd.base).replace('*','')+", %edi")
-    att_add_2 = make_struct("andl\t$0xffffffe0, %edi")
+    # att_add_2 = make_struct("andl\t$0xffffffe0, %edi")
+    att_add_2= make_struct("mov \t$5, %esi")
+    att_add_2_1 = make_struct("shrx\t%esi, %edi, %edi")
+    att_add_2_2 = make_struct("shlx\t%esi, %edi, %edi")
     att_add_3 = make_struct("lea \t(%r13, %rdi, 1), %rdi")
     att_add_4 = make_struct("jmp \t*%rdi")
-    return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4], att.orignal_str)
+    return assign_orig_str([att_add_1, att_add_2, att_add_2_1, att_add_2_2, att_add_3, att_add_4], att.orignal_str)
 
 def confinemnet_stack_point(att:ATTASM):
     # MEMREG OR REGEREG

@@ -3,7 +3,7 @@ from enum import EnumMeta
 from keystone import *
 from define import *
 import re
-from utilities import log
+from utilities import warning
 
 
 # !!! attention keystone use hex data default
@@ -109,18 +109,16 @@ class ATTASM:
         try:
             t_s = self.assem_str
             if "$" in self.assem_str:
-                o_s = re.findall(r'\-?\d+',t_s)[0]
-                t_s = t_s.replace(o_s, hex(int(o_s)).replace("0x",''))
+                o_s = re.findall(r'\$\-?\d+',t_s)[0]
+                t_s = t_s.replace(o_s, '$'+hex(int(o_s[1:])))
             if len(re.findall(r'[\,\s]\-?\d+\(',t_s)) != 0:
                 o_s = re.findall(r'[\,\s]\-?\d+\(',t_s) 
-                o_s = [i[1:-1] for i in o_s]
-                r_s = [hex(int(i)).replace("0x",'') for i in o_s]
+                r_s = [i[0]+hex(int(i[1:-1]))+i[-1] for i in o_s]
                 for o,r in zip(o_s,r_s):
                     t_s = t_s.replace(o,r)
             hard_code,count = ks.asm(t_s)  # ks.asm return truple such as.([90,90],1L)
         except keystone.KsError as err:
-            log(err)
-            print("[+]: "+self.assem_str+"  --> asm error amd I default using jmp lable: 5 byte code")
+            warning(str(err)+" :--: "+self.assem_str+"  --> asm error amd I default using jmp lable: 5 byte code")
             hard_code = [90]*5
             count = 1 
         assert count == 1
@@ -147,7 +145,9 @@ class ATTASM:
                 OPDMEMREG: lambda x,y,z:str(x) +', '+ y.base,
                 OPDMEMMEM: lambda x,y,z:str(x) +', '+ str(y),
                 OPDIMEREGREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z),
-                OPDIMEMEMREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z)
+                OPDIMEMEMREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z), 
+                OPDREGIMEREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z), 
+                OPDREGREGREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z)
                 }
         if self.operand_size == 2:
             # if self.DataType == OPDREG:
@@ -156,6 +156,8 @@ class ATTASM:
             #    s += str(self.src_opd)
             s += str(self.src_opd)
         else:
+            #print(self.orignal_str)
+            #print(self.DataType)
             s += strr[self.DataType](self.src_opd,self.dst_opd, self.third_opd)
             
         self.assem_str = s

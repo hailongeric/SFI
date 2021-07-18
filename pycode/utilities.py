@@ -1,5 +1,5 @@
 # python 
-
+import re
 LOG = True
 DEBUG = False
 def log(s):
@@ -44,8 +44,11 @@ def read_file(filename):
     return s
 
 def assert_condition(s):
-    
-    if "r15" in s or "r14" in s or "r13" in s:
+    # TODO add %es %ds %cs %ss %gs don't appear on destination
+    if len(re.findall(r'\%r1[345]',s)) != 0:
+        return False
+    # !!! in special segment register don't place destination or don't use segment register
+    if len(re.findall(r'\%[cdesgf]s\W', s)) != 0:
         return False
 
     # !!! in special syscall communitcate    
@@ -55,10 +58,18 @@ def assert_condition(s):
     # !!! in special %rip can't place destination in opdata
     s = s.split("\n")
     for c in s:
-        if "rip" in c:
+        if "rip" in c: 
             t = c.split(',')[-1]
             if "rip" in t and "(" not in t:
                 return False
+                
+    # # !!! in special segment register don't place destination or don't use segment register
+    # for c in s:
+    #     if "%cs" in c or "%ds" in c or "%es" in c or "%ss" in c or "%gs" in c: 
+    #         error(c)
+    #         t = c.split(',')[-1]
+    #         if "%ds" in t and "(" not in t:
+    #             return False
 
     return True
 
