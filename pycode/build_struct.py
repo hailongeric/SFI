@@ -164,7 +164,10 @@ def trans_str(att_list):
         if att.Itype == IANNOT and att.op[0] == '#':
             s.append(att.assem_str)
         elif att.Itype != ILABEL:
-            s.append("\t" + att.assem_str)
+            if DEBUG and ".???" not in att.orignal_str:
+                s.append("\t{:<40}\t{:<40}".format(att.assem_str,"#"+att.orignal_str))
+            else:
+                s.append("\t" + att.assem_str)
         else:
             s.append(att.assem_str)
     return '\n'.join(s)
@@ -173,10 +176,10 @@ def trans_str(att_list):
 def init_asm(s_list:list):
     att_list = []
     asm_att:ATTASM
-    for ins in s_list:
+    for index,ins in enumerate(s_list):
         asm_att = make_struct(ins)
         if asm_att is None:
             continue
-        asm_att.orignal_str = ins
+        asm_att.orignal_str = ins +'\t' + str(index)
         att_list.append(asm_att)
     return att_list

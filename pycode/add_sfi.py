@@ -1,4 +1,5 @@
 # python 
+from typing import Optional
 from ch_reg_function import assign_orig_str
 from utilities import expand_list, Fdebug
 from assem_struct import *
@@ -33,12 +34,13 @@ def is_stack_op(att:ATTASM):
         return False
 
 # def memory_confine_base(op_data:OP_DATA):
-def memory_confine_base(op_data:OPD):
+def memory_confine_base(op_data:OPD, tmp_reg="%r12"):
 
     # !!! in special deal with mov lable(%rip), %reg
     if "rip" in str(op_data):
         return [op_data]
     dst_dtype =  op_data.get_Dtype()
+
     if dst_dtype == 0x00100 or dst_dtype == 0x01100:   # also solve 0x01000
         base = op_data.base
         if "r14" in base or "r15" in base:
@@ -46,22 +48,22 @@ def memory_confine_base(op_data:OPD):
         s = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
         op_data.base = "%r13"
         op_data.index = base
-
         # !!! in special  solve push and pop rsp rbp check 
         return [s, op_data ]
+        
     else:
         base = op_data.base
         # TODO judge if stack register
-        s = "lea \t" + str(op_data) +", " + base
-        if "r14" in base or "r15" in base:
-            if "%" in op_data.index:
-                base = op_data.index
-        s = "lea \t" + str(op_data) +", " + base
 
-        s2 = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
+        # if "r14" in base or "r15" in base:
+        #     if "%" in op_data.index:
+        #         base = op_data.index
+        s = "lea \t" + str(op_data) +", " + tmp_reg
+
+        s2 = "mov \t" + reg_swtich_low(tmp_reg) + ", " + reg_swtich_low(tmp_reg)
         ret_op_data = OPD()
         ret_op_data.base = "%r13"
-        ret_op_data.index = base
+        ret_op_data.index = tmp_reg
         ret_op_data.scale = "1"
         ret_op_data.accesss_memory = True
         # !!! in special  solve push and pop rsp rbp check 
@@ -85,7 +87,6 @@ def memory_confine_REGMEM(att:ATTASM):
     return assign_orig_str(ret_att, att.orignal_str)
 
 def memory_confine_MEMREG(att:ATTASM):
-    # print(".........................")
     if is_stack_op(att):
         return confinemnet_stack_point(att)
     src_data =  att.src_opd
@@ -98,7 +99,6 @@ def memory_confine_MEMREG(att:ATTASM):
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
-    # print([str(i) for i in ret_att])
     return assign_orig_str(ret_att, att.orignal_str)
 
 def memory_confine_MEMMEM(att:ATTASM):
@@ -160,6 +160,14 @@ def confinemnet_stack_point(att:ATTASM):
         att_add_1 = make_struct("lea \t(%r13, {}, 1), {}".format(att.dst_opd.base,att.dst_opd.base))
     return assign_orig_str([att_add, att_add_1], att.orignal_str)
 
+def confinement_rep_ins(att:ATTASM):
+    att_add_1 = make_struct("mov \t%esi, %esi")
+    att_add_2 = make_struct("mov \t%edi, %edi")
+    att_add_3 = make_struct("lea \t(%r13, %rsi), %rsi")
+    att_add_4 = make_struct("lea \t(%r13, %rdi), %rdi")
+    return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4, att], att.orignal_str)
+
+
 def avoid_stack(att:ATTASM):
     if att.dst_opd.Dtype == 0x01100 and ("r14" in att.dst_opd.base or "r15" in  att.dst_opd.base):
         return True
@@ -186,6 +194,11 @@ def add_sfi_main(att_list):
         # !!! add confinement rsp rbp as r14 r15 
         if att.sfi_stack == False:
             continue
+
+        # !!! in special handle rep operation
+        if len(re.findall(r'\w\w\ws[bwd]',att.assem_str))!=0:
+             att_list[index] = confinement_rep_ins(att)
+             continue
 
         if att.Itype == IINSTR and att.operand_size != 1:
             if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE, OPDIMEREGREG]:
@@ -220,24 +233,50 @@ def add_sfi_main(att_list):
 
 def add_align(att_list):
     ret_att = []
+    op_size = []
+    tmp_att = []
     align = 32
+    tmp_align = 0
+    tmp_str = ""
     for att in att_list:
         att:ATTASM
         if att.Itype == ILABEL:
-            ret_att.append(make_struct(".align 32"))
+            ret_att.append(tmp_att)
+            op_size.append(tmp_align)
+            tmp_att= []
+            tmp_align = 0
             ret_att.append(att)
-            align =  32
-            continue
-        c_size = att.get_opcode_size()
-        align -= c_size
-        if align < 0:
-            align += c_size
-            assert align >= 0
-            ret_att.append(make_struct(".align 32"))
-            align =  32 - c_size
-            ret_att.append(att)
+            op_size.append(32)
         else:
-            ret_att.append(att)
-        
+            if tmp_str != att.orignal_str:
+                ret_att.append(tmp_att)
+                op_size.append(tmp_align)
+                tmp_att= [att]
+                tmp_str = att.orignal_str
+                tmp_align = att.get_opcode_size()
+            else:
+                tmp_att.append(att)
+                tmp_align += att.get_opcode_size()
+
+    ret_att.append(tmp_att)
+    op_size.append(tmp_align)
+
+    assert len(ret_att) == len(op_size)
+    tmp_att = ret_att
+    Fdebug(op_size)
+    ret_att = []
+    for size,att in zip(op_size,tmp_att):
+        if size == 32:
+            ret_att.append((make_struct(".align 32")))
+            align = 32
+        else:
+            align -= size
+            if align < 0:
+                align += size
+                assert align >= 0
+                ret_att.append(make_struct(".align 32"))
+                align =  32 - size
+        ret_att.append(att)
+    ret_att = expand_list(ret_att)
     return ret_att
 

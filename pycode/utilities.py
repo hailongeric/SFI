@@ -1,23 +1,24 @@
 # python 
 import re
 LOG = True
-DEBUG = False
+DEBUG = True
+
 def log(s):
     if LOG:
-        print("[+]: " + str(s))
+        print(f'\033[32m{"[+]: " + str(s)}\033[0m')
     return 
 
 def Fdebug(s):
     if DEBUG:
-        print("[DEBUB]: " + s)
+        print(f'\033[33m{"[DEBUB]: " + str(s)}\033[0m')
     return
 
 def warning(s):
-    print("[W]: " + s)
+    print(f'\033[35m{"[W]: " + str(s)}\033[0m')
     return
 
 def error(s):
-    print("[E]: " + s)
+    print(f'\033[31m{"[E]: " + str(s)}\033[0m')
     return
 
 def expand_list(s):
@@ -49,6 +50,7 @@ def assert_condition(s):
         return False
     # !!! in special segment register don't place destination or don't use segment register
     if len(re.findall(r'\%[cdesgf]s\W', s)) != 0:
+        Fdebug(re.findall(r'\%[cdesgf]s\W', s))
         return False
 
     # !!! in special syscall communitcate    
@@ -61,8 +63,9 @@ def assert_condition(s):
         if "rip" in c: 
             t = c.split(',')[-1]
             if "rip" in t and "(" not in t:
+                #print(t)
                 return False
-                
+
     # # !!! in special segment register don't place destination or don't use segment register
     # for c in s:
     #     if "%cs" in c or "%ds" in c or "%es" in c or "%ss" in c or "%gs" in c: 
