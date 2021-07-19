@@ -52,12 +52,7 @@ def memory_confine_base(op_data:OPD, tmp_reg="%r12"):
         return [s, op_data ]
         
     else:
-        base = op_data.base
-        # TODO judge if stack register
 
-        # if "r14" in base or "r15" in base:
-        #     if "%" in op_data.index:
-        #         base = op_data.index
         s = "lea \t" + str(op_data) +", " + tmp_reg
 
         s2 = "mov \t" + reg_swtich_low(tmp_reg) + ", " + reg_swtich_low(tmp_reg)
@@ -266,7 +261,7 @@ def add_align(att_list):
     Fdebug(op_size)
     ret_att = []
     for size,att in zip(op_size,tmp_att):
-        if size == 32:
+        if size >= 32:
             ret_att.append((make_struct(".align 32")))
             align = 32
         else:
