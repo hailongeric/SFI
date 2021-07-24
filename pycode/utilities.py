@@ -161,17 +161,18 @@ def in_format_patch(s:str):
     RET_FLAG = False
     RET_FUN = ""
 
+
     for i in s:
         if len(i.strip()) == 0:
             continue
         if ".globl" in i:
             RET_FLAG = True
-            RET_FUN = i.split(" ")[-1].strip()
+            RET_FUN = i.split("\t")[-1].strip()
             
         if RET_FLAG and 'ret' in i:
             # replace ret using .???
             if i.strip() != "ret":
-                print("[!] {} differ default(ret)".format(i))
+                error("[!] {} differ default(ret)".format(i))
 
             ret.append(i.replace('ret','.???'))
             continue

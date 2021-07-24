@@ -145,11 +145,11 @@ def ch_leave(att:ATTASM):
     att_add_2.sfi_stack = False
     return assign_orig_str([att_add, att_add_1, att_add_2], orignal_str)
 
-def solve_jump_ins_main(att_list):
+def handle_special_ass(att_list):
 
     for index,att in enumerate(att_list):
         if att.Itype == 3:
-            # !!! must place syscall at the head call 
+            # !!! must place syscall at the head of call 
             # don't using 'in' and use 'is' maybe bad code compatibile
 
             if "syscall" in att.op:

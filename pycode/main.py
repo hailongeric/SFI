@@ -6,11 +6,11 @@ from utilities import *
 from ch_reg_function import *
 from build_struct import *
 
-def main_main(s_list):
+def sfi_main(s_list):
     log("\tparse assemble code...")
     att_list = init_asm(s_list)
     log("\tsolve jump instrcution")
-    att_list = solve_jump_ins_main(att_list)
+    att_list = handle_special_ass(att_list)
     log("\tadd_sfi_main")
     att_list = add_sfi_main(att_list)
     log("\talign 32")
@@ -37,7 +37,7 @@ def main(argv):
     s = replace_stack_reg(s)
     log("enter main logic... ")
     s_list =  in_format_patch(s)
-    s = main_main(s_list)
+    s = sfi_main(s_list)
     log("finish add sfi, and ouptut file {0} ".format(out_filename))
 
     s = out_format_patch(s)

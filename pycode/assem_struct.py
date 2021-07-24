@@ -3,7 +3,7 @@ from enum import EnumMeta
 from keystone import *
 from define import *
 import re
-from utilities import warning
+from utilities import Fdebug, warning
 
 
 # !!! attention keystone use hex data default
@@ -24,7 +24,7 @@ class OPD:
         # if or not access memory
         self.accesss_memory = False
     
-        self.Dtype = self.__data_type__() # don't suggest use this attribute
+        self.Dtype = self.__data_type__() # don't suggest to use this attribute
 
     
     def __str__(self):
@@ -104,10 +104,11 @@ class ATTASM:
             return 0
         if "endbr" in self.op:  # endbr64 / endbr32 not recongnition by ks.asm
             return 4
-        if "lea" in self.op and self.DataType == OPDMEMREG:
-            return 7
+        # if "lea" in self.op and self.DataType == OPDMEMREG:
+        #     return 7
         try:
             t_s = self.assem_str
+            Fdebug(t_s)
             if "$" in self.assem_str:
                 o_s = re.findall(r'\$\-?\d+',t_s)[0]
                 t_s = t_s.replace(o_s, '$'+hex(int(o_s[1:])))
@@ -116,12 +117,13 @@ class ATTASM:
                 r_s = [i[0]+hex(int(i[1:-1]))+i[-1] for i in o_s]
                 for o,r in zip(o_s,r_s):
                     t_s = t_s.replace(o,r)
+            Fdebug(t_s)
             hard_code,count = ks.asm(t_s)  # ks.asm return truple such as.([90,90],1L)
         except keystone.KsError as err:
             warning(str(err)+" :--: "+self.assem_str+"  --> asm error amd I default using jmp lable: 5 byte code")
             hard_code = [90]*5
             count = 1 
-        assert count == 1
+        assert count >= 1
         return len(hard_code)
 
     def get_opcode_size(self):
@@ -150,10 +152,6 @@ class ATTASM:
                 OPDREGREGREG:lambda x,y,z:str(x) +', '+ str(y) + ', '+ str(z)
                 }
         if self.operand_size == 2:
-            # if self.DataType == OPDREG:
-            #     s += self.src_opd.base
-            # else:
-            #    s += str(self.src_opd)
             s += str(self.src_opd)
         else:
             #print(self.orignal_str)
@@ -163,6 +161,3 @@ class ATTASM:
         self.assem_str = s
         return
             
-        
-
- 

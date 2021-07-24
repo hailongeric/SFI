@@ -1,5 +1,4 @@
 # python 
-from typing import Optional
 from ch_reg_function import assign_orig_str
 from utilities import expand_list, Fdebug
 from assem_struct import *
@@ -156,11 +155,15 @@ def confinemnet_stack_point(att:ATTASM):
     return assign_orig_str([att_add, att_add_1], att.orignal_str)
 
 def confinement_rep_ins(att:ATTASM):
+    
     att_add_1 = make_struct("mov \t%esi, %esi")
     att_add_2 = make_struct("mov \t%edi, %edi")
     att_add_3 = make_struct("lea \t(%r13, %rsi), %rsi")
     att_add_4 = make_struct("lea \t(%r13, %rdi), %rdi")
-    return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4, att], att.orignal_str)
+    if "sto" in att.assem_str or "lod" in att.assem_str or  "sca" in att.assem_str:
+        return assign_orig_str([att_add_2, att_add_4, att], att.orignal_str)
+    else:
+        return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4, att], att.orignal_str)
 
 
 def avoid_stack(att:ATTASM):
@@ -185,13 +188,11 @@ def add_sfi_main(att_list):
     # how to solve lea:ISA 
     for index,att in enumerate(att_list):
         att:ATTASM
-        # print(att)
-        # !!! add confinement rsp rbp as r14 r15 
+
         if att.sfi_stack == False:
             continue
-
         # !!! in special handle rep operation
-        if len(re.findall(r'\w\w\ws[bwd]',att.assem_str))!=0:
+        if len(re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str))!=0:
              att_list[index] = confinement_rep_ins(att)
              continue
 
