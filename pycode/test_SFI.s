@@ -1,53 +1,75 @@
 	.file	"test_SFI.c"
 	.text
-	.type	add, @function
-add:
+	.type	test_ptr_function, @function
+test_ptr_function:
 	endbr64
 	pushq	%rbp
 	movq	%rsp, %rbp
-	movl	%edi, -68(%rbp)
-	movl	%esi, -72(%rbp)
-	movl	-68(%rbp), %edx
-	movl	-72(%rbp), %eax
-	addl	%edx, %eax
-	movl	%eax, -52(%rbp)
-	movq	$0, -48(%rbp)
-	movq	$0, -40(%rbp)
-	movq	$0, -32(%rbp)
-	movq	$0, -24(%rbp)
-	movq	$0, -16(%rbp)
-	movq	$0, -8(%rbp)
-	cmpl	$0, -52(%rbp)ddddd
-	je	.L5
-	movl	$90, -52(%rbp)
-	jmp	.L3
-.L5:
-	nop
-.L3:
-	movl	-52(%rbp), %eax 
+	movl	$0, %eax
 	popq	%rbp
 	ret
-	.size	add, .-add
-	.globl	mymain
-	.type	mymain, @function
-mymain:
+	.size	test_ptr_function, .-test_ptr_function
+	.globl	sfimain
+	.type	sfimain, @function
+sfimain:
 	endbr64
 	pushq	%rbp
 	movq	%rsp, %rbp
-	subq	$16, %rsp
-	movl	$10, -12(%rbp)
-	movl	$20, -8(%rbp)
-	movl	$0, -4(%rbp) 
-	movl	-8(%rbp), %edx
-	movl	-12(%rbp), %eax
-	movl	%edx, %esi
-	movl	%eax, %edi
-	call	add
-	movl	%eax, -4(%rbp)
+	subq	$96, %rsp
+	movl	$0, -12(%rbp)
+	jmp	.L4
+.L13:
+	movl	$0, -16(%rbp)
+	jmp	.L5
+.L12:
+	movl	$0, -20(%rbp)
+	movl	$0, -24(%rbp)
+	jmp	.L6
+.L11:
+	movl	-24(%rbp), %eax
+	movl	%eax, -28(%rbp)
+	cmpl	$4096, -28(%rbp)
+	je	.L15
+	cmpl	$4112, -28(%rbp)
+	jne	.L9
+	movl	-20(%rbp), %eax
+	addl	%eax, %eax
+	addl	$1, %eax
+	movl	%eax, -20(%rbp)
+.L9:
+	leaq	test_ptr_function(%rip), %rax
+	movq	%rax, -8(%rbp)
+	jmp	.L10
+.L15:
+	nop
+.L10:
+	movq	-8(%rbp), %rdx
 	movl	$0, %eax
+	call	*%rdx
+	addl	$1, -24(%rbp)
+.L6:
+	cmpl	$1, -24(%rbp)
+	jle	.L11
+	movl	-16(%rbp), %eax
+	cltq
+	movl	-12(%rbp), %edx
+	movslq	%edx, %rdx
+	salq	$2, %rdx
+	addq	%rax, %rdx
+	movl	-20(%rbp), %eax
+	movl	%eax, -96(%rbp,%rdx,4)
+	addl	$1, -16(%rbp)
+.L5:
+	cmpl	$1, -16(%rbp)
+	jle	.L12
+	addl	$1, -12(%rbp)
+.L4:
+	cmpl	$1, -12(%rbp)
+	jle	.L13
+	movl	$-1, %eax
 	leave
 	ret
-	.size	mymain, .-mymain
+	.size	sfimain, .-sfimain
 	.ident	"GCC: (Ubuntu 9.3.0-17ubuntu1~20.04) 9.3.0"
 	.section	.note.GNU-stack,"",@progbits
 	.section	.note.gnu.property,"a"

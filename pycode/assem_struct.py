@@ -1,10 +1,14 @@
 # python
-from enum import EnumMeta
+
 from keystone import *
 from define import *
 import re
 from utilities import Fdebug, warning
 
+class FDM:
+    def __init__(self,FU=FUNUSE) -> None:
+        self.flag_use = FU
+        self.flag_block = 1
 
 # !!! attention keystone use hex data default
 class OPD:
@@ -85,10 +89,9 @@ class ATTASM:
         self.dst_opd = destination
         self.third_opd = third_opd
         
-        # TODO add some attach information to inform add SFI information
         self.orignal_str = ""
         self.sfi_stack =  True  #!! default true and must modify and if it's false no need modify
-
+        self.fdm = FDM()
         self.opcode_size = self.__opcode_size__()  # don't suggest use this attribute
 
     def __opcode_size__(self):
@@ -155,7 +158,7 @@ class ATTASM:
             s += str(self.src_opd)
         else:
             #print(self.orignal_str)
-            #print(self.DataType)
+            #print(self.DataType) 
             s += strr[self.DataType](self.src_opd,self.dst_opd, self.third_opd)
             
         self.assem_str = s

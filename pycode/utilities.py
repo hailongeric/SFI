@@ -42,20 +42,19 @@ def expand_list(s):
 def read_file(filename):
     f = open(filename,"r")
     s = f.read()
+    f.close()
     return s
 
 def assert_condition(s):
-    # TODO add %es %ds %cs %ss %gs don't appear on destination
-    if len(re.findall(r'\%r1[345]',s)) != 0:
+    
+    if len(re.findall(r'\%r1[2345]',s)) != 0:
         return False
     # !!! in special segment register don't place destination or don't use segment register
+
+    #  %es %ds %cs %ss %gs don't appear on destination
     if len(re.findall(r'\%[cdesgf]s\W', s)) != 0:
         Fdebug(re.findall(r'\%[cdesgf]s\W', s))
         return False
-
-    # !!! in special syscall communitcate    
-    # if "syscall" in s:
-    #     return False
     
     # !!! in special %rip can't place destination in opdata
     s = s.split("\n")
@@ -63,16 +62,7 @@ def assert_condition(s):
         if "rip" in c: 
             t = c.split(',')[-1]
             if "rip" in t and "(" not in t:
-                #print(t)
                 return False
-
-    # # !!! in special segment register don't place destination or don't use segment register
-    # for c in s:
-    #     if "%cs" in c or "%ds" in c or "%es" in c or "%ss" in c or "%gs" in c: 
-    #         error(c)
-    #         t = c.split(',')[-1]
-    #         if "%ds" in t and "(" not in t:
-    #             return False
 
     return True
 
@@ -144,23 +134,12 @@ def split_op_opdata(ins_str):
     assert len(op_data) > 0
     return op, op_data
 
-# orginal code 
-# def split_file_data(s):
-#     s = s.split('\n')
-#     ret = []
-#     for i in s:
-#         if len(i.strip()) == 0:
-#             continue
-#         ret.append(i)
-#     return ret
-# above orignal code 
 # !!! in special add ret in global 
 def in_format_patch(s:str):
     s = s.split('\n')
     ret = []
     RET_FLAG = False
     RET_FUN = ""
-
 
     for i in s:
         if len(i.strip()) == 0:

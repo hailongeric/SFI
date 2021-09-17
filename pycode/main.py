@@ -5,10 +5,12 @@ from assem_struct import *
 from utilities import * 
 from ch_reg_function import *
 from build_struct import *
+from cfg_fun import *
 
 def sfi_main(s_list):
     log("\tparse assemble code...")
     att_list = init_asm(s_list)
+    # att_list = init_cfg(att_list)
     log("\tsolve jump instrcution")
     att_list = handle_special_ass(att_list)
     log("\tadd_sfi_main")
@@ -39,7 +41,6 @@ def main(argv):
     s_list =  in_format_patch(s)
     s = sfi_main(s_list)
     log("finish add sfi, and ouptut file {0} ".format(out_filename))
-
     s = out_format_patch(s)
     write_file(s,out_filename)
     log("Done !!!")

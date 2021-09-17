@@ -29,3 +29,9 @@ OPDREGREGREG = 12
 
 
 SFI_ADD_LABLE_NUM = 0
+
+# cfg flag use 
+FUSE = 1
+FUNUSE = 0
+FSET = 2
+
