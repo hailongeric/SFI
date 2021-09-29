@@ -12,7 +12,7 @@ op_list = ["push", "mov", "add", "cmp", "jmp", "sub", "mul", "div", "rcp", "sqrt
 special_op = ["aaa"]
 
 def reg_swtich_low(reg):
-    reg_low_table = {"%rax":"%eax","%rbx":"%ebx","%rcx":"%ecx","%rdx":"%edx","%rsi":"%esi","%rdi":"%edi","%rbp":"%ebp","%rsp":"%esp","%r8":"%r8d","%r9":"%r9d","%r10":"%r10d","%r11":"%r11d","%r12":"%r12d","%r13":"%r13d","%r14":"%r14d","%r15":"%r15d"}
+    reg_low_table = {"%rax":"%eax","%rbx":"%ebx","%rcx":"%ecx","%rdx":"%edx","%rsi":"%esi","%rdi":"%edi","%rbp":"%ebp","%rsp":"%esp","%r8":"%r8d","%r9":"%r9d","%r10":"%r10d","%r11":"%r11d","%r12":"%r12d","%r13":"%r13d","%r14":"%r14d","%r15":"%r15d", "%r14d":"%r14d"}
     reg = reg.strip()
     return reg_low_table[reg]
 
@@ -193,9 +193,10 @@ def add_sfi_main(att_list):
             continue
         # !!! in special handle rep operation
         if len(re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str))!=0:
-             att_list[index] = confinement_rep_ins(att)
-             continue
-
+            if re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str) != ['vabsq\t']:
+                att_list[index] = confinement_rep_ins(att)
+            continue
+        print(att)
         if att.Itype == IINSTR and att.operand_size != 1:
             if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE, OPDIMEREGREG]:
                 if is_stack_op(att):
