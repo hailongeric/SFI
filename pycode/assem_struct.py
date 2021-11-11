@@ -10,6 +10,14 @@ class FDM:
         self.flag_use = FU
         self.flag_block = 1
 
+    def __str__(self) -> str:
+        if self.flag_block >= 2:
+            return "Y"
+        elif self.flag_block == 0:
+            return "C"
+        else:
+            return "N"
+
 # !!! attention keystone use hex data default
 class OPD:
     """
@@ -112,7 +120,7 @@ class ATTASM:
         try:
             t_s = self.assem_str
             Fdebug(t_s)
-            if "$" in self.assem_str:
+            if "$" in self.assem_str and "0x" not in self.assem_str:
                 o_s = re.findall(r'\$\-?\d+',t_s)[0]
                 t_s = t_s.replace(o_s, '$'+hex(int(o_s[1:])))
             if len(re.findall(r'[\,\s]\-?\d+\(',t_s)) != 0:
@@ -122,6 +130,8 @@ class ATTASM:
                     t_s = t_s.replace(o,r)
             Fdebug(t_s)
             hard_code,count = ks.asm(t_s)  # ks.asm return truple such as.([90,90],1L)
+            # print(str(hard_code))
+            # print(count)
         except keystone.KsError as err:
             warning(str(err)+" :--: "+self.assem_str+"  --> asm error amd I default using jmp lable: 5 byte code")
             hard_code = [90]*5

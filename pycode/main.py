@@ -10,7 +10,7 @@ from cfg_fun import *
 def sfi_main(s_list):
     log("\tparse assemble code...")
     att_list = init_asm(s_list)
-    # att_list = init_cfg(att_list)
+    att_list = cfg_main(att_list)
     log("\tsolve jump instrcution")
     att_list = handle_special_ass(att_list)
     log("\tadd_sfi_main")
@@ -21,7 +21,6 @@ def sfi_main(s_list):
     return s_list
 
 def main(argv):
-    
     filename = "test.s"
     out_filename="sfi_"+filename
     if len(argv) < 2:

@@ -165,7 +165,7 @@ def trans_str(att_list):
             s.append(att.assem_str)
         elif att.Itype != ILABEL:
             if DEBUG and ".???" not in att.orignal_str:
-                s.append("\t{:<40}\t{:<40}".format(att.assem_str,"#"+att.orignal_str))
+                s.append("\t{:<40}\t{:<40}:{:<120}".format(att.assem_str,"#"+att.orignal_str,str(att.fdm)))
             else:
                 s.append("\t" + att.assem_str)
         else:

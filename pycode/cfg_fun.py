@@ -1,7 +1,7 @@
 from assem_struct import *
 from define import *
-
-SET_FLAG_OP = ["add","and","cmp","div","imu","mul", "neg","scas","sub","clc","rol","ror"]
+# test xor orl
+SET_FLAG_OP = ["add","and","cmp","div","imu","mul", "neg","sca","sub","clc","rol","ror","tes","xor","orl"]
 USE_FLAG_OP = ["set","cmo"]
 
 def init_cfg(att_list):
@@ -11,7 +11,7 @@ def init_cfg(att_list):
             continue 
         op = att.op
         op = op.strip()
-        # jmp
+        # jmp jle gl
         if op[0] == 'j': 
             if op == "jmp":
                 att.fdm.flag_use = FUNUSE
@@ -33,11 +33,11 @@ def add_cfg_info(att_list):
         att:ATTASM
         if att.fdm.flag_use == FUSE:
             flag_block = True
-            att_list[index].fdm.flag_block = 1
+            att_list[index].fdm.flag_block = 3
         elif flag_block and att.fdm.flag_use != FSET:
-            att_list[index].fdm.flag_block = 1
+            att_list[index].fdm.flag_block = 2
         elif flag_block and att.fdm.flag_use == FSET:
-            att_list[index].fdm.flag_block = 2  # may be 
+            att_list[index].fdm.flag_block = 3  # may be 
             flag_block = False
         else:
             att_list[index].fdm.flag_block = 0
@@ -47,22 +47,29 @@ def add_cfg_info(att_list):
 
 def cfg_main(att_list):
     '''
-    reconginze every function and get cfg logic
+    reconginze every function and get   cfg logic
     '''
+    att_list = init_cfg(att_list)
     fun_start = 0
     fun_end = 0
     cur_fun = ""
     for index, att in enumerate(att_list):
         att:ATTASM
+        #print(cur_fun)
         if "@function" in att.orignal_str and ".type" in att.orignal_str:
-            cur_fun = att.orignal_str.split(',')[0].split('\t')[1].strip()
+            cur_fun = att.orignal_str.split(',')[0].strip().split('\t')[1].strip()
             fun_start = index + 1
             fun_end =  -1
         elif ".size" in att.orignal_str and len(cur_fun) != 0 and cur_fun in att.orignal_str:
+            print("function ")
             fun_end = index
             att_list[fun_start:fun_end] = add_cfg_info(att_list[fun_start:fun_end])
             cur_fun = ""
 
+        #print(str(att.fdm))
+    #exit()
     return att_list
 
 
+
+                

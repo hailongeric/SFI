@@ -29,8 +29,6 @@ def expand_list(s):
         s =  ret
         ret = []
         for i in s:
-
-            
             if type(i) == list:
                 flag = False
                 for j in i:
@@ -47,7 +45,7 @@ def read_file(filename):
 
 def assert_condition(s):
     
-    if len(re.findall(r'\%r1[2345]',s)) != 0:
+    if len(re.findall(r'\%r1[235]',s)) != 0:
         return False
     # !!! in special segment register don't place destination or don't use segment register
 
@@ -55,7 +53,12 @@ def assert_condition(s):
     if len(re.findall(r'\%[cdesgf]s\W', s)) != 0:
         Fdebug(re.findall(r'\%[cdesgf]s\W', s))
         return False
-    
+
+    # !!! in special leave can't show on in omit-frame-point
+    if len(re.findall(r"\Wleave\W",s)) !=0:
+        Fdebug(re.findall(r'\Wleave\W', s))
+        return False
+        
     # !!! in special %rip can't place destination in opdata
     s = s.split("\n")
     for c in s:

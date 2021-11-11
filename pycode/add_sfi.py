@@ -27,7 +27,8 @@ def op_switch_low(op):
 
 # TODO this may be avoid memory
 def is_stack_op(att:ATTASM):
-    if "r14" in str(att.dst_opd) or "r15" in str(att.dst_opd):
+    # if "r14" in str(att.dst_opd) or "r15" in str(att.dst_opd):
+    if "r15" in str(att.dst_opd):
         return True
     else:
         return False
@@ -78,7 +79,7 @@ def memory_confine_REGMEM(att:ATTASM):
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
-    return assign_orig_str(ret_att, att.orignal_str)
+    return assign_orig_str(ret_att, att.orignal_str,att)
 
 def memory_confine_MEMREG(att:ATTASM):
     if is_stack_op(att):
@@ -93,7 +94,7 @@ def memory_confine_MEMREG(att:ATTASM):
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
-    return assign_orig_str(ret_att, att.orignal_str)
+    return assign_orig_str(ret_att, att.orignal_str, att)
 
 def memory_confine_MEMMEM(att:ATTASM):
     src_data =  att.src_opd
@@ -112,7 +113,7 @@ def memory_confine_MEMMEM(att:ATTASM):
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
-    return assign_orig_str(ret_att,att.orignal_str)
+    return assign_orig_str(ret_att,att.orignal_str, att)
     
 def memory_confine_MEM(att:ATTASM):
     att_list = memory_confine_MEMREG(att)
@@ -136,12 +137,13 @@ def jmpaddress_confine(att:ATTASM):
     att_add_2_2 = make_struct("shlx\t%esi, %edi, %edi")
     att_add_3 = make_struct("lea \t(%r13, %rdi, 1), %rdi")
     att_add_4 = make_struct("jmp \t*%rdi")
-    return assign_orig_str([att_add_1, att_add_2, att_add_2_1, att_add_2_2, att_add_3, att_add_4], att.orignal_str)
+    return assign_orig_str([att_add_1, att_add_2, att_add_2_1, att_add_2_2, att_add_3, att_add_4], att.orignal_str, att)
 
 def confinemnet_stack_point(att:ATTASM):
     # MEMREG OR REGEREG
     if att.DataType == OPDREGREG:
-        if "r14" in str(att.src_opd) or "r15" in str(att.src_opd):
+        # if "r14" in str(att.src_opd) or "r15" in str(att.src_opd):
+        if "r15" in str(att.src_opd):
             return att
         else:
             att_add = make_struct(op_switch_low(att.op)+"\t"+reg_swtich_low(att.src_opd.base)+", "+reg_swtich_low(att.dst_opd.base))
@@ -152,7 +154,7 @@ def confinemnet_stack_point(att:ATTASM):
     else:
         att_add = make_struct(op_switch_low(att.op)+'\t'+str(att.src_opd)+", "+ reg_swtich_low(att.dst_opd.base))
         att_add_1 = make_struct("lea \t(%r13, {}, 1), {}".format(att.dst_opd.base,att.dst_opd.base))
-    return assign_orig_str([att_add, att_add_1], att.orignal_str)
+    return assign_orig_str([att_add, att_add_1], att.orignal_str, att)
 
 def confinement_rep_ins(att:ATTASM):
     
@@ -163,13 +165,18 @@ def confinement_rep_ins(att:ATTASM):
     if "sto" in att.assem_str or "lod" in att.assem_str or  "sca" in att.assem_str:
         return assign_orig_str([att_add_2, att_add_4, att], att.orignal_str)
     else:
-        return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4, att], att.orignal_str)
+        return assign_orig_str([att_add_1, att_add_2, att_add_3, att_add_4, att], att.orignal_str, att)
 
 
 def avoid_stack(att:ATTASM):
-    if att.dst_opd.Dtype == 0x01100 and ("r14" in att.dst_opd.base or "r15" in  att.dst_opd.base):
+    # !!! O0 version
+    # if att.dst_opd.Dtype == 0x01100 and ("r14" in att.dst_opd.base or "r15" in  att.dst_opd.base):
+    #     return True
+    # if att.src_opd.Dtype == 0x01100 and ("r14" in att.src_opd.base or "r15" in  att.src_opd.base):
+    #     return True
+    if att.dst_opd.Dtype == 0x01100 and "r15" in  att.dst_opd.base:
         return True
-    if att.src_opd.Dtype == 0x01100 and ("r14" in att.src_opd.base or "r15" in  att.src_opd.base):
+    if att.src_opd.Dtype == 0x01100 and "r15" in  att.src_opd.base:
         return True
     return False
 
@@ -192,11 +199,11 @@ def add_sfi_main(att_list):
         if att.sfi_stack == False:
             continue
         # !!! in special handle rep operation
+        # TODO fix rep instruction
         if len(re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str))!=0:
             if re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str) != ['vabsq\t']:
                 att_list[index] = confinement_rep_ins(att)
             continue
-        print(att)
         if att.Itype == IINSTR and att.operand_size != 1:
             if att.DataType in [OPDREG , OPDREGREG , OPDIMEREG , OPDLABLE, OPDIMEREGREG]:
                 if is_stack_op(att):

@@ -5,27 +5,43 @@ from utilities import *
 from define import SFI_ADD_LABLE_NUM
 
 
+# def replace_stack_reg(s):
+#     """
+#     # rbp --> r14
+#     # rsp --> r15
+#     # arg s: string --> read input file convert string
+#     # return string --> string after solve ch_rg 
+#     """
+
+#     s = s.replace("%rsp","%r15")
+#     s = s.replace("%rbp","%r14")
+#     s = s.replace("%spl","%r15b")
+#     s = s.replace("%bpl","%r14b")
+#     s = s.replace("%sp","%r15w")
+#     s = s.replace("%bp","%r14w")
+#     s = s.replace("%esp","%r15d")
+#     s = s.replace("%ebp","%r14d")
+#     return s
+
 def replace_stack_reg(s):
     """
-    # rbp --> r14
     # rsp --> r15
     # arg s: string --> read input file convert string
     # return string --> string after solve ch_rg 
     """
-
     s = s.replace("%rsp","%r15")
-    s = s.replace("%rbp","%r14")
     s = s.replace("%spl","%r15b")
-    s = s.replace("%bpl","%r14b")
     s = s.replace("%sp","%r15w")
-    s = s.replace("%bp","%r14w")
     s = s.replace("%esp","%r15d")
-    s = s.replace("%ebp","%r14d")
     return s
 
-def assign_orig_str(att_list, orignal_str):
+
+
+def assign_orig_str(att_list, orignal_str,att=None):
     for index in range(len(att_list)):
         att_list[index].orignal_str = orignal_str
+        if att is not None:
+            att_list[index].fdm = att.fdm
     return att_list
 
 def assign_sfi_stack(att_list):
@@ -54,7 +70,7 @@ def ch_syscall(att:ATTASM):
     att_add_3 = make_struct("ret")
     att_add_4 = make_struct(".sfi_lable{}:".format(SFI_ADD_LABLE_NUM))
     SFI_ADD_LABLE_NUM += 1
-    return assign_orig_str([att_add_0, att_add_1, att_add_2, att_add_3, att_add_4], orignal_str)
+    return assign_orig_str([att_add_0, att_add_1, att_add_2, att_add_3, att_add_4], orignal_str,att)
 
 
 def ch_push(att:ATTASM):
@@ -72,7 +88,7 @@ def ch_push(att:ATTASM):
     att = make_struct(s)
     att_add.sfi_stack = False
     att.sfi_stack = False
-    return assign_orig_str([att_add, att],orignal_str)
+    return assign_orig_str([att_add, att],orignal_str,att)
 
     
 def ch_pop(att:ATTASM):
@@ -92,7 +108,7 @@ def ch_pop(att:ATTASM):
     att_add = make_struct("lea \t8(%r15), %r15")
     att.sfi_stack = False
     att_add.sfi_stack = False
-    return assign_orig_str([att, att_add], orignal_str)
+    return assign_orig_str([att, att_add], orignal_str,att)
 
 def ch_ret(att:ATTASM):
     """
@@ -104,7 +120,7 @@ def ch_ret(att:ATTASM):
     att_add = make_struct("lea \t8(%r15), %r15")
     att_add.sfi_stack = False
     att = make_struct("jmp \t*-8(%r15)")
-    return assign_orig_str([att_add, att],orignal_str)
+    return assign_orig_str([att_add, att],orignal_str,att)
 
 def ch_call(att:ATTASM):
     """
@@ -120,14 +136,16 @@ def ch_call(att:ATTASM):
     att_add_1 =make_struct("leaq\t.sfi_lable{}(%rip), %rax".format(SFI_ADD_LABLE_NUM))
     # att_add_2 = make_struct("addq\t$12, %rax")
     att_add_2 = make_struct("movq\t%rax, (%r15)")
-    s = att.assem_str.replace("call","jmp *")
+    # !!! here is error, call calloc@PLT is bad
+    # s = att.assem_str.replace("call","jmp *")  
+    s = att.assem_str.replace("call","jmp *",1) 
     att = make_struct(s)
     att_add_3 = make_struct(".sfi_lable{}:".format(SFI_ADD_LABLE_NUM))
     SFI_ADD_LABLE_NUM += 1
     att_add.sfi_stack = False
     att_add_1.sfi_stack = False
     att_add_2.sfi_stack = False
-    return assign_orig_str([att_add,att_add_1,att_add_2,att,att_add_3],orignal_str)
+    return assign_orig_str([att_add,att_add_1,att_add_2,att,att_add_3],orignal_str,att)
 
 def ch_leave(att:ATTASM):
     """
@@ -143,12 +161,12 @@ def ch_leave(att:ATTASM):
     att_add.sfi_stack = False
     #!!! att_add_1 must be add sfi movl r14d,r14d, 
     att_add_2.sfi_stack = False
-    return assign_orig_str([att_add, att_add_1, att_add_2], orignal_str)
+    return assign_orig_str([att_add, att_add_1, att_add_2], orignal_str,att)
 
 def handle_special_ass(att_list):
 
     for index,att in enumerate(att_list):
-        if att.Itype == 3:
+        if att.Itype == IINSTR:
             # !!! must place syscall at the head of call 
             # don't using 'in' and use 'is' maybe bad code compatibile
 
@@ -162,7 +180,7 @@ def handle_special_ass(att_list):
                 att_list[index] = ch_ret(att)
             elif "call" in att.op:
                 att_list[index] = ch_call(att)
-            elif "leave" in att.op:
-                att_list[index] = ch_leave(att)
+            # elif "leave" in att.op:
+            #     att_list[index] = ch_leave(att)
     att_list = expand_list(att_list)
     return att_list
