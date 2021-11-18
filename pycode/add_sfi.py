@@ -113,7 +113,7 @@ def memory_confine_MEMMEM(att:ATTASM):
     for s in ret_data:
         ret_att.append(make_struct(s))
     ret_att.append(att)
-    return assign_orig_str(ret_att,att.orignal_str, att)
+    return assign_orig_str(ret_att,att.orignal_str,att)
     
 def memory_confine_MEM(att:ATTASM):
     att_list = memory_confine_MEMREG(att)
@@ -199,9 +199,11 @@ def add_sfi_main(att_list):
         if att.sfi_stack == False:
             continue
         # !!! in special handle rep operation
-        # TODO fix rep instruction
-        if len(re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str))!=0:
-            if re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str) != ['vabsq\t']:
+        # TODO fix rep instruction : already fix one version
+            #     if len(re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str))!=0:
+            # if re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str) != ['vabsq\t']:
+        if len(re.findall(r'\w\w\ws[bwdq]\W',att.assem_str))!=0:
+            if re.findall(r'\w\w\ws[bwdq]\W',att.assem_str) != ['vabsq\t']:
                 att_list[index] = confinement_rep_ins(att)
             continue
         if att.Itype == IINSTR and att.operand_size != 1:

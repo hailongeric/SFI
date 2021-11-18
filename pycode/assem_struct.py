@@ -120,14 +120,18 @@ class ATTASM:
         try:
             t_s = self.assem_str
             Fdebug(t_s)
-            if "$" in self.assem_str and "0x" not in self.assem_str:
-                o_s = re.findall(r'\$\-?\d+',t_s)[0]
-                t_s = t_s.replace(o_s, '$'+hex(int(o_s[1:])))
-            if len(re.findall(r'[\,\s]\-?\d+\(',t_s)) != 0:
-                o_s = re.findall(r'[\,\s]\-?\d+\(',t_s) 
-                r_s = [i[0]+hex(int(i[1:-1]))+i[-1] for i in o_s]
-                for o,r in zip(o_s,r_s):
-                    t_s = t_s.replace(o,r)
+            # !!! fix scenario: $key_shift_sizes+8 
+            try:
+                if "$" in self.assem_str and "0x" not in self.assem_str:
+                    o_s = re.findall(r'\$\-?\d+',t_s)[0]
+                    t_s = t_s.replace(o_s, '$'+hex(int(o_s[1:])))
+                if len(re.findall(r'[\,\s]\-?\d+\(',t_s)) != 0:
+                    o_s = re.findall(r'[\,\s]\-?\d+\(',t_s) 
+                    r_s = [i[0]+hex(int(i[1:-1]))+i[-1] for i in o_s]
+                    for o,r in zip(o_s,r_s):
+                        t_s = t_s.replace(o,r)
+            except IndexError:
+                warning(str(IndexError)+" :--: "+t_s+"  -->hex warning")
             Fdebug(t_s)
             hard_code,count = ks.asm(t_s)  # ks.asm return truple such as.([90,90],1L)
             # print(str(hard_code))

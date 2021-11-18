@@ -55,19 +55,15 @@ def cfg_main(att_list):
     cur_fun = ""
     for index, att in enumerate(att_list):
         att:ATTASM
-        #print(cur_fun)
         if "@function" in att.orignal_str and ".type" in att.orignal_str:
             cur_fun = att.orignal_str.split(',')[0].strip().split('\t')[1].strip()
             fun_start = index + 1
             fun_end =  -1
         elif ".size" in att.orignal_str and len(cur_fun) != 0 and cur_fun in att.orignal_str:
-            print("function ")
             fun_end = index
             att_list[fun_start:fun_end] = add_cfg_info(att_list[fun_start:fun_end])
             cur_fun = ""
 
-        #print(str(att.fdm))
-    #exit()
     return att_list
 
 

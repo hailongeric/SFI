@@ -1,7 +1,7 @@
 # python 
 import re
 LOG = True
-DEBUG = True
+DEBUG = False
 
 def log(s):
     if LOG:
@@ -51,12 +51,17 @@ def assert_condition(s):
 
     #  %es %ds %cs %ss %gs don't appear on destination
     if len(re.findall(r'\%[cdesgf]s\W', s)) != 0:
-        Fdebug(re.findall(r'\%[cdesgf]s\W', s))
+        error(re.findall(r'\%[cdesgf]s\W', s))
         return False
 
     # !!! in special leave can't show on in omit-frame-point
     if len(re.findall(r"\Wleave\W",s)) !=0:
-        Fdebug(re.findall(r'\Wleave\W', s))
+        error(re.findall(r'\Wleave\W', s))
+        return False
+
+    # !!! don't use the PLT 
+    if len(re.findall(r"\w@PLT\W",s)) !=0:
+        error(re.findall(r"\w*@PLT\W", s))
         return False
         
     # !!! in special %rip can't place destination in opdata
