@@ -170,10 +170,6 @@ def confinement_rep_ins(att:ATTASM):
 
 def avoid_stack(att:ATTASM):
     # !!! O0 version
-    # if att.dst_opd.Dtype == 0x01100 and ("r14" in att.dst_opd.base or "r15" in  att.dst_opd.base):
-    #     return True
-    # if att.src_opd.Dtype == 0x01100 and ("r14" in att.src_opd.base or "r15" in  att.src_opd.base):
-    #     return True
     if att.dst_opd.Dtype == 0x01100 and "r15" in  att.dst_opd.base:
         return True
     if att.src_opd.Dtype == 0x01100 and "r15" in  att.src_opd.base:
@@ -199,11 +195,12 @@ def add_sfi_main(att_list):
         if att.sfi_stack == False:
             continue
         # !!! in special handle rep operation
-        # TODO fix rep instruction : already fix one version
-            #     if len(re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str))!=0:
-            # if re.findall(r'\w\w\ws[bwdq]\W?',att.assem_str) != ['vabsq\t']:
-        if len(re.findall(r'\w\w\ws[bwdq]\W',att.assem_str))!=0:
-            if re.findall(r'\w\w\ws[bwdq]\W',att.assem_str) != ['vabsq\t']:
+        # TODO fix rep instruction : already fix one version to do fix rep ret 
+
+        # TODO deal with rep ret 
+        
+        if len(re.findall(r'\w\w\ws[bwdq]\W',att.assem_str))!=0 and "rep" in att.assem_str:
+            if re.findall(r'\w\w\ws[bwdq]\W',att.assem_str) != ['vabsq\t'] and "ret" not in att.assem_str:
                 att_list[index] = confinement_rep_ins(att)
             continue
         if att.Itype == IINSTR and att.operand_size != 1:

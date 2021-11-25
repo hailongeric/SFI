@@ -64,9 +64,9 @@ def ch_syscall(att:ATTASM):
     orignal_str = att.orignal_str
     att_add_0 = make_struct("lea\t-8(%r15), %r15")
     att_add_0.sfi_stack =  False
-    att_add_1 = make_struct("lea \t.sfi_lable{}(%rip), %rbx".format(SFI_ADD_LABLE_NUM))
+    att_add_1 = make_struct("lea \t.sfi_lable{}(%rip), %r12".format(SFI_ADD_LABLE_NUM))
     att_add_1.sfi_stack =  False
-    att_add_2 = make_struct("movq\t%rbx, (%r15)")
+    att_add_2 = make_struct("movq\t%r12, (%r15)")
     att_add_3 = make_struct("ret")
     att_add_4 = make_struct(".sfi_lable{}:".format(SFI_ADD_LABLE_NUM))
     SFI_ADD_LABLE_NUM += 1
@@ -132,10 +132,10 @@ def ch_call(att:ATTASM):
     att_add =make_struct("lea \t-8(%r15), %r15")
     global SFI_ADD_LABLE_NUM
     # s_add_1 ="movq    %rip, (%r15)"
-    # !!! using rax register
-    att_add_1 =make_struct("leaq\t.sfi_lable{}(%rip), %rax".format(SFI_ADD_LABLE_NUM))
+    # !!! using r12 register
+    att_add_1 =make_struct("leaq\t.sfi_lable{}(%rip), %r12".format(SFI_ADD_LABLE_NUM))
     # att_add_2 = make_struct("addq\t$12, %rax")
-    att_add_2 = make_struct("movq\t%rax, (%r15)")
+    att_add_2 = make_struct("movq\t%r12, (%r15)")
     # !!! here is error, call calloc@PLT is bad
     # s = att.assem_str.replace("call","jmp *")  
     s = att.assem_str.replace("call","jmp *",1) 
