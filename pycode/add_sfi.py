@@ -34,8 +34,8 @@ def is_stack_op(att:ATTASM):
         return False
 
 # def memory_confine_base(op_data:OP_DATA):
-def memory_confine_base(op_data:OPD, tmp_reg="%r12"):
-
+def memory_confine_base(op_data:OPD,fdm:FDM=FDM()):
+    tmp_reg="%r12"
     # !!! in special deal with mov lable(%rip), %reg
     if "rip" in str(op_data):
         return [op_data]
@@ -52,10 +52,14 @@ def memory_confine_base(op_data:OPD, tmp_reg="%r12"):
         return [s, op_data ]
         
     else:
-
         s = "lea \t" + str(op_data) +", " + tmp_reg
 
-        s2 = "mov \t" + reg_swtich_low(tmp_reg) + ", " + reg_swtich_low(tmp_reg)
+        s4 = "mov \t" + reg_swtich_low(tmp_reg) + ", " + reg_swtich_low(tmp_reg)
+        #s2 = "cmp \t" + "BIGND(%rip), " + tmp_reg
+        #s3 = "cmova\t"+ reg_swtich_low(tmp_reg) + ", " + reg_swtich_low(tmp_reg)
+        # s3 = "ja  \t.ERRRORRR"
+
+
         ret_op_data = OPD()
         ret_op_data.base = "%r13"
         ret_op_data.index = tmp_reg
@@ -67,12 +71,15 @@ def memory_confine_base(op_data:OPD, tmp_reg="%r12"):
         # if "r14" in s or "r15" in s:
         #     return [s, ret_op_data]
         # else:
-        return [s, s2, ret_op_data]
+        # if fdm.flag_block >= 2:
+            # return [s, s4, ret_op_data]
+        # return [s, s2, s3, ret_op_data]
+        return [s,s4, ret_op_data]
         
 def memory_confine_REGMEM(att:ATTASM):
     dst_data =  att.dst_opd
     dst_data:OPD
-    ret_data = memory_confine_base(dst_data)
+    ret_data = memory_confine_base(dst_data,att.fdm)
     att.dst_opd = ret_data[-1]
     ret_data = ret_data[:-1]
     ret_att = []
@@ -87,7 +94,7 @@ def memory_confine_MEMREG(att:ATTASM):
     src_data =  att.src_opd
     src_data:OPD
 
-    ret_data = memory_confine_base(src_data)
+    ret_data = memory_confine_base(src_data, att.fdm)
     att.src_opd = ret_data[-1]
     ret_data = ret_data[:-1]
     ret_att = []
@@ -99,7 +106,7 @@ def memory_confine_MEMREG(att:ATTASM):
 def memory_confine_MEMMEM(att:ATTASM):
     src_data =  att.src_opd
     src_data:OPD
-    ret_data = memory_confine_base(src_data)
+    ret_data = memory_confine_base(src_data, att.fdm)
     att.src_opd = ret_data[-1]
     ret_data = ret_data[:-1]
     ret_att = []
@@ -107,7 +114,7 @@ def memory_confine_MEMMEM(att:ATTASM):
         ret_att.append(make_struct(s))
     dst_data =  att.dst_opd
     dst_data:OPD
-    ret_data = memory_confine_base(dst_data)
+    ret_data = memory_confine_base(dst_data, att.fdm)
     att.dst_opd = ret_data[-1] 
     ret_data = ret_data[:-1]
     for s in ret_data:

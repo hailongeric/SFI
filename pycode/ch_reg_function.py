@@ -137,7 +137,7 @@ def ch_call(att:ATTASM):
     # att_add_2 = make_struct("addq\t$12, %rax")
     att_add_2 = make_struct("movq\t%r12, (%r15)")
     # !!! here is error, call calloc@PLT is bad
-    # s = att.assem_str.replace("call","jmp *")  
+    
     s = att.assem_str.replace("call","jmp *",1) 
     att = make_struct(s)
     att_add_3 = make_struct(".sfi_lable{}:".format(SFI_ADD_LABLE_NUM))

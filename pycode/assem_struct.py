@@ -140,7 +140,10 @@ class ATTASM:
             warning(str(err)+" :--: "+self.assem_str+"  --> asm error amd I default using jmp lable: 5 byte code")
             hard_code = [90]*5
             count = 1 
-        assert count >= 1
+        Fdebug(str(hard_code)+"<-- hardcode ;  count:"+str(count))
+        #assert count >= 1
+        if count ==0 :
+            return 1
         return len(hard_code)
 
     def get_opcode_size(self):

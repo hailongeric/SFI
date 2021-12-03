@@ -181,5 +181,7 @@ def out_format_patch(s:str):
     # !!! in special ret recover using .???
     s = s.replace('.???','movq\t%rax, %rdi\n\tmovl\t$0x1000, %eax\n\tret')
     # !!! in special last line  must be '\n'
-    s += "\n"
+    s += "\n\n"
+    #s += "\n\t.data\n\t.align 8\n\t.type   BIGND, @object\n\t.size   BIGND, 8\nBIGND:\n\t.quad   4294967295\n"
+    #s += ".ERRRORRR:\n\tmovl\t$0xFFFF, %eax\n\tret\n\n"
     return s
