@@ -42,7 +42,7 @@ def memory_confine_base(op_data:OPD,fdm:FDM=FDM()):
     dst_dtype =  op_data.get_Dtype()
 
     if dst_dtype == 0x00100 or dst_dtype == 0x01100:   # also solve 0x01000
-        base = op_data.base
+        base = op_data.base 
         if "r14" in base or "r15" in base:
             return [op_data]
         s = "mov \t" + reg_swtich_low(base) + ", " + reg_swtich_low(base)
