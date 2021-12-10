@@ -5,9 +5,6 @@ from assem_struct import *
 from build_struct import make_struct
 from define import *
 
-DEBUG = False
-
-
 op_list = ["push", "mov", "add", "cmp", "jmp", "sub", "mul", "div", "rcp", "sqrt", "rsqrt", "lea", "call", "load", ""]
 special_op = ["aaa"]
 
@@ -58,7 +55,6 @@ def memory_confine_base(op_data:OPD,fdm:FDM=FDM()):
         #s2 = "cmp \t" + "BIGND(%rip), " + tmp_reg
         #s3 = "cmova\t"+ reg_swtich_low(tmp_reg) + ", " + reg_swtich_low(tmp_reg)
         # s3 = "ja  \t.ERRRORRR"
-
 
         ret_op_data = OPD()
         ret_op_data.base = "%r13"
@@ -138,12 +134,16 @@ def jmpaddress_confine(att:ATTASM):
         att_add_1 = make_struct("movl\t"+str(att.src_opd).replace('*','')+", %edi")
     else:
         att_add_1 = make_struct("mov\t"+str(att.src_opd.base).replace('*','')+", %edi")
-    # att_add_2 = make_struct("andl\t$0xffffffe0, %edi")
+    
+    att_add_5 = make_struct("andl\t$0xffffffe0, %edi")
     att_add_2= make_struct("mov \t$5, %esi")
     att_add_2_1 = make_struct("shrx\t%esi, %edi, %edi")
     att_add_2_2 = make_struct("shlx\t%esi, %edi, %edi")
     att_add_3 = make_struct("lea \t(%r13, %rdi, 1), %rdi")
     att_add_4 = make_struct("jmp \t*%rdi")
+    # !!! using cfg to optimize the jmp 
+    if att.fdm.flag_block >= 2:
+        return assign_orig_str([att_add_1,att_add_5,att_add_3,att_add_4])
     return assign_orig_str([att_add_1, att_add_2, att_add_2_1, att_add_2_2, att_add_3, att_add_4], att.orignal_str, att)
 
 def confinemnet_stack_point(att:ATTASM):
@@ -204,7 +204,12 @@ def add_sfi_main(att_list):
         # !!! in special handle rep operation
         # TODO fix rep instruction : already fix one version to do fix rep ret 
 
-        # TODO deal with rep ret 
+        # TODO deal with rep ret
+        
+        # !!! patch the rep movsb address problem
+        if "movsb" in att.assem_str and "rep" in att.assem_str:
+            att_list[index] = confinement_rep_ins(att)
+            continue
         
         if len(re.findall(r'\w\w\ws[bwdq]\W',att.assem_str))!=0 and "rep" in att.assem_str:
             if re.findall(r'\w\w\ws[bwdq]\W',att.assem_str) != ['vabsq\t'] and "ret" not in att.assem_str:
