@@ -46,8 +46,13 @@ def read_file(filename):
 def assert_condition(s):
     
     if len(re.findall(r'\%r1[235]',s)) != 0:
+        error(re.findall(r'\%r1[235]', s))
         return False
     # !!! in special segment register don't place destination or don't use segment register
+
+    if len(re.findall(r"\%[re]bp",s)) !=0:
+        error(re.findall(r"\%[re]bp",s))
+        return False
 
     #  %es %ds %cs %ss %gs don't appear on destination
     if len(re.findall(r'\%[cdesgf]s\W', s)) != 0:
@@ -160,7 +165,10 @@ def in_format_patch(s:str):
             # replace ret using .???
             if i.strip() != "ret":
                 error("[!] {} differ default(ret)".format(i))
-
+                # maybe shouldn't ignore the error 
+                # !!! special handle the instruction "rep ret"
+                if "rep" in i.strip():
+                    i = i.replace("rep","")
             ret.append(i.replace('ret','.???'))
             continue
         if ".size" in i and RET_FUN in i and RET_FLAG:
